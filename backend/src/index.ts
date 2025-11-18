@@ -118,6 +118,154 @@ app.get('/api/results', authMiddleware, async (req: AuthRequest, res: Response) 
   }
 });
 
+// Protected endpoint - Get statistics for charts
+app.get('/api/statistics', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const days = parseInt(req.query.days as string) || 30; // Default to last 30 days
+
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    // Get all data for the user within the date range
+    const [instances, volumes, eips] = await Promise.all([
+      prisma.idleInstance.findMany({
+        where: {
+          userId,
+          createdAt: { gte: startDate },
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+      prisma.orphanedVolume.findMany({
+        where: {
+          userId,
+          createdAt: { gte: startDate },
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+      prisma.unattachedEIP.findMany({
+        where: {
+          userId,
+          createdAt: { gte: startDate },
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+    ]);
+
+    // Group by date
+    const dateMap = new Map<string, {
+      date: string;
+      instances: number;
+      volumes: number;
+      eips: number;
+      totalCost: number;
+    }>();
+
+    // Helper to format date as YYYY-MM-DD
+    const formatDate = (date: Date) => {
+      return date.toISOString().split('T')[0];
+    };
+
+    // Process instances
+    instances.forEach(instance => {
+      const date = formatDate(instance.createdAt);
+      if (!dateMap.has(date)) {
+        dateMap.set(date, {
+          date,
+          instances: 0,
+          volumes: 0,
+          eips: 0,
+          totalCost: 0,
+        });
+      }
+      const entry = dateMap.get(date)!;
+      entry.instances += 1;
+      const cost = instance.estimatedMonthlyCost 
+        ? parseFloat(instance.estimatedMonthlyCost.replace('$', '')) 
+        : 0;
+      entry.totalCost += cost;
+    });
+
+    // Process volumes
+    volumes.forEach(volume => {
+      const date = formatDate(volume.createdAt);
+      if (!dateMap.has(date)) {
+        dateMap.set(date, {
+          date,
+          instances: 0,
+          volumes: 0,
+          eips: 0,
+          totalCost: 0,
+        });
+      }
+      const entry = dateMap.get(date)!;
+      entry.volumes += 1;
+      const cost = volume.estimatedMonthlyCost 
+        ? parseFloat(volume.estimatedMonthlyCost.replace('$', '')) 
+        : 0;
+      entry.totalCost += cost;
+    });
+
+    // Process EIPs
+    eips.forEach(eip => {
+      const date = formatDate(eip.createdAt);
+      if (!dateMap.has(date)) {
+        dateMap.set(date, {
+          date,
+          instances: 0,
+          volumes: 0,
+          eips: 0,
+          totalCost: 0,
+        });
+      }
+      const entry = dateMap.get(date)!;
+      entry.eips += 1;
+    });
+
+    // Convert to array and sort by date
+    const statistics = Array.from(dateMap.values()).sort((a, b) => 
+      a.date.localeCompare(b.date)
+    );
+
+    // Calculate cumulative totals
+    let cumulativeInstances = 0;
+    let cumulativeVolumes = 0;
+    let cumulativeEips = 0;
+    let cumulativeCost = 0;
+
+    const statisticsWithCumulative = statistics.map(stat => {
+      cumulativeInstances += stat.instances;
+      cumulativeVolumes += stat.volumes;
+      cumulativeEips += stat.eips;
+      cumulativeCost += stat.totalCost;
+
+      return {
+        ...stat,
+        cumulativeInstances,
+        cumulativeVolumes,
+        cumulativeEips,
+        cumulativeCost: Math.round(cumulativeCost * 100) / 100,
+      };
+    });
+
+    res.status(200).json({
+      message: 'Statistics retrieved successfully',
+      data: statisticsWithCumulative,
+      summary: {
+        totalInstances: cumulativeInstances,
+        totalVolumes: cumulativeVolumes,
+        totalEips: cumulativeEips,
+        totalCost: Math.round(cumulativeCost * 100) / 100,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'An error occurred while fetching statistics',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
 // Protected endpoint - Run scan for authenticated user
 app.post('/api/scan', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {

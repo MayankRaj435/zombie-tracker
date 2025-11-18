@@ -1,4 +1,4 @@
-# 🛡️ SaaS Sentry
+# 🛡️ CloudGuard
 
 A modern, secure application for monitoring and optimizing AWS cloud costs with advanced authentication and resource management capabilities.
 
@@ -75,6 +75,8 @@ For detailed setup instructions, please refer to [SETUP_INSTRUCTIONS.md](./SETUP
 
 ## 📚 Documentation
 
+- [User Setup Guide](./USER_SETUP_GUIDE.md) - **Start Here!** Complete setup instructions for new users
+- [Tech Stack](./TECH_STACK.md) - Complete technology stack and their roles
 - [Authentication Plan](./AUTHENTICATION_PLAN.md)
 - [Resource Access Plan](./RESOURCE_ACCESS_PLAN.md)
 - [Quick Start Guide](./QUICK_START.md)

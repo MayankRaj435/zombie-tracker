@@ -34,7 +34,7 @@ export default function Login() {
             <span className="auth-icon">🛡️</span>
             Welcome Back
           </h1>
-          <p className="auth-subtitle">Sign in to your SaaS Sentry account</p>
+          <p className="auth-subtitle">Sign in to your CloudGuard account</p>
         </div>
 
         {error && (

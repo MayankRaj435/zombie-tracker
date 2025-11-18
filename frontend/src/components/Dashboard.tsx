@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import ConnectAWS from './auth/ConnectAWS';
+import StatisticsChart from './StatisticsChart';
 import '../App.css';
 
 const API_URL = 'http://localhost:3001';
@@ -142,7 +143,7 @@ export default function Dashboard() {
               <div className="header-title-section">
                 <h1 className="dashboard-title">
                   <span className="title-icon">🛡️</span>
-                  SaaS Sentry Dashboard
+                  CloudGuard Dashboard
                 </h1>
                 <p className="dashboard-subtitle">Intelligent cloud waste detection and cost optimization</p>
               </div>
@@ -176,7 +177,7 @@ export default function Dashboard() {
             <div className="header-title-section">
               <h1 className="dashboard-title">
                 <span className="title-icon">🛡️</span>
-                SaaS Sentry Dashboard
+                CloudGuard Dashboard
               </h1>
               <p className="dashboard-subtitle">Intelligent cloud waste detection and cost optimization</p>
             </div>
@@ -348,6 +349,9 @@ export default function Dashboard() {
                 Last updated: {lastFetched.toLocaleString()}
               </div>
             )}
+
+            {/* Statistics Chart Section */}
+            <StatisticsChart />
 
             <div className="data-sections">
               <div className="data-card">
