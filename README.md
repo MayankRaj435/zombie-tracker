@@ -1,106 +1,85 @@
-# 🛡️ SaasSentry
+<div align="center">
 
-A modern, secure application for monitoring and optimizing AWS cloud costs with advanced authentication and resource management capabilities.
+<img src="https://capsule-render.vercel.app/api?type=waving&height=220&text=SaasSentry&fontAlign=50&fontAlignY=40&color=gradient" />
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Node](https://img.shields.io/badge/node-%3E%3D%2016.0.0-brightgreen)
-![TypeScript](https://img.shields.io/badge/typescript-%5E5.0.0-blue)
-![React](https://img.shields.io/badge/react-%5E18.0.0-blue)
+<p align="center">
+  <img src="https://readme-typing-svg.herokuapp.com?size=26&duration=2500&pause=600&center=true&vCenter=true&width=700&lines=Secure+AWS+Cloud+Cost+Monitoring;Real-time+Resource+Tracking;Cost+Optimization+%7C+Authentication+%7C+Dashboard;Built+with+React+%2B+Node+%2B+TypeScript" />
+</p>
 
-## 🚀 Features
+<p align="center">
+  <b>Modern, secure application to monitor, manage and optimize AWS cloud costs with advanced authentication & resource controls.</b>
+</p>
 
-- 🔐 Secure Authentication System
-- 📊 AWS Resource Monitoring
-- 💰 Cost Analysis and Optimization
-- 🔄 Real-time Resource Tracking
-- 🛠️ User-friendly Dashboard
-- 🔒 EIP Management
+<br/>
 
-## 🏗️ Project Structure
+<p align="center">
+  <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Node-%3E%3D16-brightgreen?style=for-the-badge&logo=node.js&logoColor=white" />
+  <img src="https://img.shields.io/badge/TypeScript-5.x-blue?style=for-the-badge&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/React-18-blue?style=for-the-badge&logo=react&logoColor=white" />
+  <img src="https://img.shields.io/badge/Prisma-ORM-2D3748?style=for-the-badge&logo=prisma&logoColor=white" />
+</p>
 
-```
-├── backend/                  # Backend server application
-│   ├── prisma/              # Database schema and migrations
-│   └── src/
-│       ├── controllers/     # Request handlers
-│       ├── middleware/      # Express middleware
-│       ├── routes/         # API routes
-│       ├── types/         # TypeScript type definitions
-│       └── utils/         # Utility functions
-│
-├── frontend/                # React frontend application
-│   ├── public/             # Static files
-│   └── src/
-│       ├── components/     # React components
-│       │   ├── auth/      # Authentication components
-│       │   └── ...
-│       ├── context/       # React context providers
-│       └── assets/        # Images and other assets
-```
+<br/>
 
-## 🛠️ Technology Stack
+<img src="https://user-images.githubusercontent.com/74038190/212897739-3b2c1f44-1b18-4ed9-a16d-3b1d8b04e354.gif" width="70%"/>
 
-- **Frontend**:
-  - React with TypeScript
-  - Vite for build tooling
-  - Modern CSS with responsive design
-  - Context API for state management
-
-- **Backend**:
-  - Node.js with TypeScript
-  - Prisma ORM
-  - JWT Authentication
-  - Express.js
-  - Secure encryption utilities
-
-## 🚀 Getting Started
-
-1. Clone the repository
-2. Set up the backend:
-   ```bash
-   cd backend
-   npm install
-   npx prisma migrate dev
-   npm run dev
-   ```
-
-3. Set up the frontend:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
-For detailed setup instructions, please refer to [SETUP_INSTRUCTIONS.md](./SETUP_INSTRUCTIONS.md)
-
-## 📚 Documentation
-
-- [User Setup Guide](./USER_SETUP_GUIDE.md) - **Start Here!** Complete setup instructions for new users
-- [Tech Stack](./TECH_STACK.md) - Complete technology stack and their roles
-- [Authentication Plan](./AUTHENTICATION_PLAN.md)
-- [Resource Access Plan](./RESOURCE_ACCESS_PLAN.md)
-- [Quick Start Guide](./QUICK_START.md)
-- [Troubleshooting](./TROUBLESHOOTING.md)
-
-## 🔒 Security
-
-This project implements several security best practices:
-- Secure password hashing with bcrypt
-- JWT-based authentication
-- Input validation and sanitization
-- Encrypted sensitive data storage
-- Secure API endpoints with middleware protection
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+</div>
 
 ---
 
-<div align="center">
-Made with ❤️ for secure cloud management
-</div>
+## ✨ What is SaasSentry?
+
+**SaasSentry** is a secure and scalable application that helps you **monitor AWS resources**, track **real-time usage**, and identify **cloud cost optimization opportunities** — all through a clean dashboard with robust authentication.
+
+---
+
+## ⚡ Key Highlights
+
+✅ **Secure Authentication System (JWT + bcrypt)**  
+✅ **AWS Resource Monitoring & Tracking**  
+✅ **Cost Analysis + Optimization Insights**  
+✅ **Real-time Resource Activity View**  
+✅ **EIP Management Support**  
+✅ **Role-friendly UI with clean experience**  
+
+---
+
+## 🧩 Tech Stack
+
+### 🎨 Frontend
+- ⚛️ React + TypeScript  
+- ⚡ Vite build tooling  
+- 🎯 Context API state management  
+- 📱 Responsive UI
+
+### 🧠 Backend
+- 🟩 Node.js + TypeScript  
+- 🚀 Express.js REST APIs  
+- 🔐 JWT Authentication  
+- 🧬 Prisma ORM  
+- 🔒 Encryption utilities
+
+---
+
+## 🏗️ Project Structure
+
+```bash
+saas-sentry/
+├── backend/
+│   ├── prisma/
+│   └── src/
+│       ├── controllers/
+│       ├── middleware/
+│       ├── routes/
+│       ├── types/
+│       └── utils/
+│
+└── frontend/
+    ├── public/
+    └── src/
+        ├── components/
+        │   ├── auth/
+        │   └── ...
+        ├── context/
+        └── assets/
