@@ -1,4 +1,4 @@
-# 🛡️ CloudGuard
+# 🛡️ SaasSentry
 
 A modern, secure application for monitoring and optimizing AWS cloud costs with advanced authentication and resource management capabilities.
 
