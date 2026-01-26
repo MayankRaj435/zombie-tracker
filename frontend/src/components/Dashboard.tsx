@@ -4,7 +4,7 @@ import ConnectAWS from './auth/ConnectAWS';
 import StatisticsChart from './StatisticsChart';
 import '../App.css';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 interface IdleInstance {
   id: string;
@@ -41,7 +41,7 @@ export default function Dashboard() {
 
   const fetchResults = async () => {
     if (!token) return;
-    
+
     setIsFetching(true);
     setError(null);
     try {
@@ -72,7 +72,7 @@ export default function Dashboard() {
 
   const handleRunScan = async () => {
     if (!token) return;
-    
+
     setIsScanning(true);
     setError(null);
     try {
@@ -107,11 +107,11 @@ export default function Dashboard() {
     if (!costString || !costString.startsWith('$')) return 0;
     return parseFloat(costString.replace('$', ''));
   };
-  
+
   const totalSavings =
     instances.reduce((acc, curr) => acc + parseCost(curr.estimatedMonthlyCost), 0) +
     volumes.reduce((acc, curr) => acc + parseCost(curr.estimatedMonthlyCost), 0);
-  
+
   const isLoading = isFetching || isScanning;
 
   const handleDeleteAccount = async () => {
@@ -152,8 +152,8 @@ export default function Dashboard() {
                   <span className="btn-icon">🚪</span>
                   Logout
                 </button>
-                <button 
-                  onClick={() => setShowDeleteConfirm(true)} 
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
                   className="btn btn-danger"
                   title="Delete Account"
                 >
@@ -182,9 +182,9 @@ export default function Dashboard() {
               <p className="dashboard-subtitle">Intelligent cloud waste detection and cost optimization</p>
             </div>
             <div className="header-actions">
-              <button 
-                onClick={handleRunScan} 
-                disabled={isLoading} 
+              <button
+                onClick={handleRunScan}
+                disabled={isLoading}
                 className="btn btn-secondary"
               >
                 {isScanning ? (
@@ -199,8 +199,8 @@ export default function Dashboard() {
                   </>
                 )}
               </button>
-              <button 
-                onClick={fetchResults} 
+              <button
+                onClick={fetchResults}
                 disabled={isLoading}
                 className="btn btn-primary"
               >
@@ -220,8 +220,8 @@ export default function Dashboard() {
                 <span className="btn-icon">🚪</span>
                 Logout
               </button>
-              <button 
-                onClick={() => setShowDeleteConfirm(true)} 
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
                 className="btn btn-danger"
                 title="Delete Account"
               >
@@ -314,7 +314,7 @@ export default function Dashboard() {
                 </div>
                 <div className="stat-glow"></div>
               </div>
-              
+
               <div className="stat-card stat-card-secondary">
                 <div className="stat-icon">🖥️</div>
                 <div className="stat-content">
@@ -323,7 +323,7 @@ export default function Dashboard() {
                   <span className="stat-period">instances found</span>
                 </div>
               </div>
-              
+
               <div className="stat-card stat-card-tertiary">
                 <div className="stat-icon">💾</div>
                 <div className="stat-content">
@@ -332,7 +332,7 @@ export default function Dashboard() {
                   <span className="stat-period">volumes found</span>
                 </div>
               </div>
-              
+
               <div className="stat-card stat-card-quaternary">
                 <div className="stat-icon">🌐</div>
                 <div className="stat-content">
