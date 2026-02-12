@@ -3,20 +3,51 @@ dotenv.config();
 
 import express, { Request, Response } from 'express';
 import cron from 'node-cron'; // Import the cron library
-import cors from 'cors'; 
+import cors from 'cors';
 import { findIdleEC2Instances, findOrphanedEBSVolumes, findUnattachedEIPs } from './awsScanner';
+import { findInsecureSecurityGroups } from './securityScanner';
 import { prisma } from './prisma';
 import authRoutes from './routes/authRoutes';
+import remediationRoutes from './routes/remediation';
+import recommendationRoutes from './routes/recommendations';
+import alertRoutes from './routes/alerts';
+import costRoutes from './routes/costs';
 import { authMiddleware, AuthRequest } from './middleware/authMiddleware';
 import { decrypt } from './utils/encryption';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-app.use(cors());
+
+// CORS configuration for production
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  process.env.FRONTEND_URL, // Add your Vercel/Netlify URL here
+].filter(Boolean); // Remove undefined values
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 
-// Auth routes
+// Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/remediation', authMiddleware, remediationRoutes);
+app.use('/api/recommendations', authMiddleware, recommendationRoutes);
+app.use('/api/alerts', authMiddleware, alertRoutes);
+app.use('/api/costs', authMiddleware, costRoutes);
+
 
 // =================================================================
 // ============== CORE SCANNING AND SAVING LOGIC ===================
@@ -25,10 +56,11 @@ app.use('/api/auth', authRoutes);
 async function runScanAndSave(userId: string, credentials: { accessKeyId: string; secretAccessKey: string; region: string }) {
   console.log(`SCANNER: Starting scan for user ${userId}...`);
   try {
-    const [idleInstances, orphanedVolumes, unattachedEips] = await Promise.all([
+    const [idleInstances, orphanedVolumes, unattachedEips, securityIssues] = await Promise.all([
       findIdleEC2Instances(credentials),
       findOrphanedEBSVolumes(credentials),
       findUnattachedEIPs(credentials),
+      findInsecureSecurityGroups(credentials),
     ]);
     console.log('SCANNER: Scans complete. Writing to database...');
 
@@ -74,6 +106,21 @@ async function runScanAndSave(userId: string, credentials: { accessKeyId: string
         });
       }
     }
+    if (securityIssues.length > 0) {
+      for (const issue of securityIssues) {
+        await prisma.securityGroupIssue.upsert({
+          where: {
+            groupId_userId_description: {
+              groupId: issue.groupId,
+              userId: userId,
+              description: issue.description
+            },
+          },
+          update: { ...issue, userId },
+          create: { ...issue, userId },
+        });
+      }
+    }
     console.log('SCANNER: Successfully saved results to the database.');
   } catch (error) {
     console.error('SCANNER: Error during scheduled scan:', error);
@@ -94,7 +141,7 @@ app.get('/api/results', authMiddleware, async (req: AuthRequest, res: Response) 
   try {
     const userId = req.userId!;
 
-    const [idleInstances, orphanedVolumes, unattachedEips] = await Promise.all([
+    const [idleInstances, orphanedVolumes, unattachedEips, securityIssues] = await Promise.all([
       prisma.idleInstance.findMany({
         where: { userId },
       }),
@@ -104,11 +151,14 @@ app.get('/api/results', authMiddleware, async (req: AuthRequest, res: Response) 
       prisma.unattachedEIP.findMany({
         where: { userId },
       }),
+      prisma.securityGroupIssue.findMany({
+        where: { userId },
+      }),
     ]);
 
     res.status(200).json({
       message: 'Successfully retrieved saved scan results',
-      data: { idleInstances, orphanedVolumes, unattachedEips },
+      data: { idleInstances, orphanedVolumes, unattachedEips, securityIssues },
     });
   } catch (error) {
     res.status(500).json({
@@ -180,8 +230,8 @@ app.get('/api/statistics', authMiddleware, async (req: AuthRequest, res: Respons
       }
       const entry = dateMap.get(date)!;
       entry.instances += 1;
-      const cost = instance.estimatedMonthlyCost 
-        ? parseFloat(instance.estimatedMonthlyCost.replace('$', '')) 
+      const cost = instance.estimatedMonthlyCost
+        ? parseFloat(instance.estimatedMonthlyCost.replace('$', ''))
         : 0;
       entry.totalCost += cost;
     });
@@ -200,8 +250,8 @@ app.get('/api/statistics', authMiddleware, async (req: AuthRequest, res: Respons
       }
       const entry = dateMap.get(date)!;
       entry.volumes += 1;
-      const cost = volume.estimatedMonthlyCost 
-        ? parseFloat(volume.estimatedMonthlyCost.replace('$', '')) 
+      const cost = volume.estimatedMonthlyCost
+        ? parseFloat(volume.estimatedMonthlyCost.replace('$', ''))
         : 0;
       entry.totalCost += cost;
     });
@@ -223,7 +273,7 @@ app.get('/api/statistics', authMiddleware, async (req: AuthRequest, res: Respons
     });
 
     // Convert to array and sort by date
-    const statistics = Array.from(dateMap.values()).sort((a, b) => 
+    const statistics = Array.from(dateMap.values()).sort((a, b) =>
       a.date.localeCompare(b.date)
     );
 

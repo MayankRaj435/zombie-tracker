@@ -48,7 +48,7 @@ export async function findIdleEC2Instances(credentials: AWSCredentials) {
 
     for (const instance of instances) {
       if (!instance.InstanceId || !instance.InstanceType) continue;
-      
+
       const avgCpu = await getAverageCpuUsage(instance.InstanceId, cloudWatchClient);
       console.log(`Instance ${instance.InstanceId} has average CPU of ${avgCpu.toFixed(2)}%`);
 
@@ -56,7 +56,7 @@ export async function findIdleEC2Instances(credentials: AWSCredentials) {
         // === COST CALCULATION ADDED HERE ===
         const cost = await getEC2InstanceCost(instance.InstanceType, region);
         console.log(`Estimated monthly cost for ${instance.InstanceId}: ${cost}`);
-        
+
         flaggedInstances.push({
           instanceId: instance.InstanceId,
           instanceType: instance.InstanceType,
@@ -65,10 +65,14 @@ export async function findIdleEC2Instances(credentials: AWSCredentials) {
         });
       }
     }
-    
+
     console.log(`Scan complete. Found ${flaggedInstances.length} idle instances.`);
     return flaggedInstances;
-  } catch (error) {
+  } catch (error: any) {
+    if (error.Code === 'UnauthorizedOperation' || error.name === 'UnauthorizedOperation') {
+      console.warn("WARNING: Skipping EC2 scan. Missing 'ec2:DescribeInstances' permission.");
+      return [];
+    }
     console.error("Error scanning for idle instances:", error);
     throw error;
   }
@@ -133,7 +137,7 @@ export async function findOrphanedEBSVolumes(credentials: AWSCredentials) {
     // Use Promise.all to fetch costs in parallel for better performance
     const flaggedVolumesPromises = Volumes.map(async (volume) => {
       if (!volume.VolumeType || !volume.Size || !volume.VolumeId) return null;
-      
+
       // === COST CALCULATION ADDED HERE ===
       const cost = await getEBSVolumeCost(volume.VolumeType, volume.Size, region);
       console.log(`Estimated monthly cost for ${volume.VolumeId}: ${cost}`);
@@ -148,9 +152,13 @@ export async function findOrphanedEBSVolumes(credentials: AWSCredentials) {
     });
 
     const flaggedVolumes = (await Promise.all(flaggedVolumesPromises)).filter(v => v !== null);
-    
+
     return flaggedVolumes as NonNullable<typeof flaggedVolumes[number]>[];
-  } catch (error) {
+  } catch (error: any) {
+    if (error.Code === 'UnauthorizedOperation' || error.name === 'UnauthorizedOperation') {
+      console.warn("WARNING: Skipping EBS volume scan. Missing 'ec2:DescribeVolumes' permission.");
+      return [];
+    }
     console.error("Error scanning for orphaned volumes:", error);
     throw error;
   }
@@ -186,10 +194,14 @@ export async function findUnattachedEIPs(credentials: AWSCredentials) {
         allocationId: addr.AllocationId!,
         reason: "This Elastic IP is not associated with any resource.",
       }));
-    
+
     console.log(`Scan complete. Found ${flaggedEIPs.length} unattached Elastic IPs.`);
     return flaggedEIPs;
-  } catch (error) {
+  } catch (error: any) {
+    if (error.Code === 'UnauthorizedOperation' || error.name === 'UnauthorizedOperation') {
+      console.warn("WARNING: Skipping Elastic IP scan. Missing 'ec2:DescribeAddresses' permission.");
+      return [];
+    }
     console.error("Error scanning for unattached EIPs:", error);
     throw error;
   }

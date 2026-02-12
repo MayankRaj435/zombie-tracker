@@ -1,19 +1,28 @@
 {
   "name": "cloudguard-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "CloudGuard Backend - Cost Optimization & Security Monitoring",
+  "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "postinstall": "prisma generate"
   },
-  "keywords": [],
+  "keywords": [
+    "aws",
+    "cost-optimization",
+    "cloud-security"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-cloudwatch": "^3.925.0",
     "@aws-sdk/client-ec2": "^3.925.0",
+    "@aws-sdk/client-iam": "^3.986.0",
     "@aws-sdk/client-pricing": "^3.927.0",
+    "@aws-sdk/client-s3": "^3.986.0",
     "@prisma/client": "^6.19.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
@@ -36,5 +45,9 @@
     "prisma": "^6.19.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   }
 }

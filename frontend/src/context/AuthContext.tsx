@@ -6,6 +6,7 @@ interface User {
   email: string;
   name: string | null;
   awsConnected: boolean;
+  awsRegion?: string;
 }
 
 interface AuthContextType {
