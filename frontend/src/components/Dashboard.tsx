@@ -22,7 +22,7 @@ import { CostForecast } from './CostForecast';
 import { ComplianceDashboard } from './ComplianceDashboard';
 import { CloudGuardLogo } from './ui/cloudguard-logo';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { API_URL } from '../config';
 
 interface IdleInstance {
   id: string;

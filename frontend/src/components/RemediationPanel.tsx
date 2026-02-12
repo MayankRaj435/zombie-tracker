@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Calendar, List, AlertTriangle, Check, X } from 'lucide-react';
+import { Play, Calendar, AlertTriangle, Check } from 'lucide-react';
 
 interface RemediationPanelProps {
     onAction: (action: string, params: any) => Promise<void>;

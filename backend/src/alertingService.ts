@@ -1,8 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import {
-    getEC2InstanceCost,
-    getEBSVolumeCost
-} from './costCalculator';
 
 const prisma = new PrismaClient();
 

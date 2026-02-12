@@ -5,7 +5,7 @@ import { Cloud, CheckCircle, AlertTriangle, Shield, Globe } from 'lucide-react';
 import { DottedGlowBackground } from '../ui/dotted-glow-background';
 import { EncryptedText } from '../ui/encrypted-text';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { API_URL } from '../../config';
 
 export default function ConnectAWS() {
   const [awsAccessKeyId, setAwsAccessKeyId] = useState('');

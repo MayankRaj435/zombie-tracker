@@ -6,7 +6,6 @@ import {
 } from '@aws-sdk/client-ec2';
 import { CloudWatchClient, GetMetricStatisticsCommand } from '@aws-sdk/client-cloudwatch';
 import { AWSCredentials } from './awsScanner';
-import { getEC2InstanceCost, getEBSVolumeCost } from './costCalculator';
 
 export interface RightSizingRecommendation {
     resourceId: string;

@@ -1,6 +1,8 @@
 import CryptoJS from 'crypto-js';
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-encryption-key-change-in-production';
+import { env } from '../config/env';
+
+const ENCRYPTION_KEY = env.ENCRYPTION_KEY;
 
 /**
  * Encrypts a string using AES encryption

@@ -54,7 +54,7 @@ export async function findIdleEC2Instances(credentials: AWSCredentials) {
 
       if (avgCpu < IDLE_THRESHOLD_PERCENT) {
         // === COST CALCULATION ADDED HERE ===
-        const cost = await getEC2InstanceCost(instance.InstanceType, region);
+        const cost = await getEC2InstanceCost(instance.InstanceType, region, { accessKeyId, secretAccessKey });
         console.log(`Estimated monthly cost for ${instance.InstanceId}: ${cost}`);
 
         flaggedInstances.push({
@@ -139,7 +139,7 @@ export async function findOrphanedEBSVolumes(credentials: AWSCredentials) {
       if (!volume.VolumeType || !volume.Size || !volume.VolumeId) return null;
 
       // === COST CALCULATION ADDED HERE ===
-      const cost = await getEBSVolumeCost(volume.VolumeType, volume.Size, region);
+      const cost = await getEBSVolumeCost(volume.VolumeType, volume.Size, region, { accessKeyId, secretAccessKey });
       console.log(`Estimated monthly cost for ${volume.VolumeId}: ${cost}`);
 
       return {

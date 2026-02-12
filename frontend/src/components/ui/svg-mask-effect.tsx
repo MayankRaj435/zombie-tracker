@@ -25,6 +25,7 @@ export const MaskContainer = ({
     };
 
     useEffect(() => {
+        if (!containerRef.current) return;
         containerRef.current.addEventListener("mousemove", updateMousePosition);
         return () => {
             if (containerRef.current) {
@@ -49,8 +50,8 @@ export const MaskContainer = ({
                 className="w-full h-full flex items-center justify-center text-6xl absolute text-white"
                 animate={{
                     clipPath: isHovered
-                        ? `polygon(0 0, ${mousePosition.x ?? 0}px 0, ${mousePosition.x ?? 0}px 100%, 0 100%)`
-                        : "polygon(0 0, 0 0, 0 100%, 0 100%)",
+                        ? `circle(${revealSize}px at ${mousePosition.x ?? 0}px ${mousePosition.y ?? 0}px)`
+                        : `circle(${size}px at ${mousePosition.x ?? 0}px ${mousePosition.y ?? 0}px)`,
                 }}
                 transition={{ type: "tween", ease: "backOut", duration: 0.1 }}
             >

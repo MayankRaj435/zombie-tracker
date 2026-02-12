@@ -14,30 +14,37 @@ import alertRoutes from './routes/alerts';
 import costRoutes from './routes/costs';
 import { authMiddleware, AuthRequest } from './middleware/authMiddleware';
 import { decrypt } from './utils/encryption';
+import { assertProductionEnv, env } from './config/env';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+assertProductionEnv();
 
-// CORS configuration for production
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  process.env.FRONTEND_URL, // Add your Vercel/Netlify URL here
-].filter(Boolean); // Remove undefined values
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+const PORT = env.PORT;
 
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
-}));
+// CORS configuration (lock down in production)
+const allowedOrigins = new Set<string>();
+if (env.NODE_ENV !== 'production') {
+  allowedOrigins.add('http://localhost:5173');
+  allowedOrigins.add('http://localhost:3000');
+}
+if (env.FRONTEND_URL) allowedOrigins.add(env.FRONTEND_URL);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Requests without an Origin header are not browser CORS requests (e.g. curl/health checks).
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.has(origin)) return callback(null, true);
+      return callback(new Error('Not allowed by CORS'));
+    },
+    // This app uses Authorization headers (no cookies), so we keep credentials off.
+    credentials: false,
+  })
+);
 
 app.use(express.json());
 
@@ -108,6 +115,10 @@ async function runScanAndSave(userId: string, credentials: { accessKeyId: string
     }
     if (securityIssues.length > 0) {
       for (const issue of securityIssues) {
+        // We currently persist Security Group issues only.
+        // Other issue types (S3/IAM) don't have a dedicated table yet.
+        if (!issue.groupId) continue;
+
         await prisma.securityGroupIssue.upsert({
           where: {
             groupId_userId_description: {
@@ -116,8 +127,20 @@ async function runScanAndSave(userId: string, credentials: { accessKeyId: string
               description: issue.description
             },
           },
-          update: { ...issue, userId },
-          create: { ...issue, userId },
+          update: {
+            groupId: issue.groupId,
+            groupName: issue.groupName,
+            description: issue.description,
+            severity: issue.severity,
+            userId,
+          },
+          create: {
+            groupId: issue.groupId,
+            groupName: issue.groupName,
+            description: issue.description,
+            severity: issue.severity,
+            userId,
+          },
         });
       }
     }

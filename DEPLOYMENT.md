@@ -1,344 +1,100 @@
-# CloudGuard Deployment Guide
+# Deployment (Free-friendly)
 
-This guide will help you deploy CloudGuard to production so others can access it over the internet.
+This repo is a monorepo:
 
-## Architecture Overview
+- `frontend/` (Vite static site) → deploy on **Vercel (free)**
+- `backend/` (Express + Prisma) → deploy on a **Node host** (Render/Koyeb/etc.)
+- PostgreSQL → **Supabase** / **Neon** / host-provided DB (free tiers exist)
 
-CloudGuard consists of two parts:
-- **Frontend** (React + Vite) - Can be deployed to Vercel, Netlify, or similar
-- **Backend** (Node.js + Express + Prisma) - Can be deployed to Render, Railway, or similar
-- **Database** (PostgreSQL) - Provided by your backend hosting platform
+> Note: Vercel is great for the frontend, but this backend is a long-running Express server (not a Vercel Serverless/Edge function setup).
 
-## Prerequisites
+## 0) Security first (do this before deploying)
 
-Before deploying, you'll need:
-1. GitHub account (to push your code)
-2. Vercel account (for frontend) - Free tier available
-3. Render/Railway account (for backend + database) - Free tier available
+- Ensure `.env` files are **not committed** (they’re already ignored).
+- If secrets were ever committed, **rotate**:
+  - AWS access keys
+  - database password / connection string
+  - `JWT_SECRET` and `ENCRYPTION_KEY`
 
----
+## 1) Deploy the frontend to Vercel (free)
 
-## Step 1: Prepare Your Code for Deployment
+This repo includes a root `vercel.json` that builds the Vite app from `frontend/`.
 
-### 1.1 Create a `.gitignore` file in the root
+### Steps
 
-```
-node_modules/
-.env
-.env.local
-dist/
-build/
-*.log
-.DS_Store
-```
+1. Push your code to GitHub.
+2. In Vercel: **Add New → Project → Import** your repo.
+3. Set environment variables (Project → Settings → Environment Variables):
+   - `VITE_API_URL` = `https://YOUR_BACKEND_DOMAIN`
+4. Deploy.
 
-### 1.2 Update Backend Environment Variables
+Vercel’s free (Hobby) tier is usually enough for demos/personal projects. (As of 2026, it includes ~100GB fast data transfer/month and generous build minutes; check Vercel’s plan page for current limits.)
 
-Create a `.env.example` file in the `backend` folder:
+## 2) Deploy the backend (free options)
 
-```env
-DATABASE_URL="postgresql://user:password@host:port/database"
-ENCRYPTION_KEY="your-32-character-encryption-key"
-JWT_SECRET="your-jwt-secret-key"
-PORT=3001
-NODE_ENV=production
-```
+You can deploy `backend/` to a service that supports Node + long-running servers.
 
-### 1.3 Update Frontend Environment Variables
+### Option A: Render (free, but sleeps)
 
-Create a `.env.example` file in the `frontend` folder:
-
-```env
-VITE_API_URL=https://your-backend-url.onrender.com
-```
-
----
-
-## Step 2: Push Code to GitHub
+- Create a new **Web Service**
+- Root directory: `backend`
+- Build command:
 
 ```bash
-# Initialize git (if not already done)
-git init
-
-# Add all files
-git add .
-
-# Commit
-git commit -m "Initial commit - CloudGuard deployment ready"
-
-# Create a new repository on GitHub, then:
-git remote add origin https://github.com/YOUR_USERNAME/cloudguard.git
-git branch -M main
-git push -u origin main
+npm ci && npx prisma generate && npx prisma db push && npm run build
 ```
 
----
+- Start command:
 
-## Step 3: Deploy Backend (Render - Recommended)
-
-### Why Render?
-- Free PostgreSQL database included
-- Easy deployment from GitHub
-- Automatic HTTPS
-- Good free tier
-
-### Steps:
-
-1. **Go to [Render.com](https://render.com)** and sign up
-
-2. **Create a PostgreSQL Database**
-   - Click "New +" → "PostgreSQL"
-   - Name: `cloudguard-db`
-   - Region: Choose closest to your users
-   - Plan: Free
-   - Click "Create Database"
-   - **Copy the "Internal Database URL"** - you'll need this!
-
-3. **Create a Web Service**
-   - Click "New +" → "Web Service"
-   - Connect your GitHub repository
-   - Configure:
-     - **Name**: `cloudguard-backend`
-     - **Region**: Same as database
-     - **Branch**: `main`
-     - **Root Directory**: `backend`
-     - **Runtime**: Node
-     - **Build Command**: `npm install && npx prisma generate && npx prisma db push`
-     - **Start Command**: `npm start`
-     - **Plan**: Free
-
-4. **Add Environment Variables** (in Render dashboard):
-   ```
-   DATABASE_URL = [Paste the Internal Database URL from step 2]
-   ENCRYPTION_KEY = [Generate a random 32-character string]
-   JWT_SECRET = [Generate a random string]
-   NODE_ENV = production
-   PORT = 3001
-   ```
-
-5. **Update `package.json` in backend** to add start script:
-   ```json
-   "scripts": {
-     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-     "build": "tsc",
-     "start": "node dist/index.js"
-   }
-   ```
-
-6. Click "Create Web Service" and wait for deployment
-
-7. **Copy your backend URL** (e.g., `https://cloudguard-backend.onrender.com`)
-
----
-
-## Step 4: Deploy Frontend (Vercel - Recommended)
-
-### Why Vercel?
-- Built for React/Vite apps
-- Automatic deployments from GitHub
-- Free tier with custom domains
-- CDN included
-
-### Steps:
-
-1. **Go to [Vercel.com](https://vercel.com)** and sign up
-
-2. **Import Your Project**
-   - Click "Add New" → "Project"
-   - Import your GitHub repository
-   - Select the repository
-
-3. **Configure Build Settings**
-   - **Framework Preset**: Vite
-   - **Root Directory**: `frontend`
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-
-4. **Add Environment Variables**:
-   ```
-   VITE_API_URL = https://cloudguard-backend.onrender.com
-   ```
-   (Use the backend URL from Step 3)
-
-5. Click "Deploy" and wait for deployment
-
-6. **Your app is live!** Vercel will give you a URL like `https://cloudguard.vercel.app`
-
----
-
-## Step 5: Configure CORS (Important!)
-
-Update your backend `src/index.ts` to allow requests from your Vercel frontend:
-
-```typescript
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://cloudguard.vercel.app', // Add your Vercel URL
-  'https://your-custom-domain.com' // If you have a custom domain
-];
-
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
-}));
+```bash
+npm start
 ```
 
-Push this change to GitHub, and Render will automatically redeploy.
+Set environment variables:
 
----
+- `DATABASE_URL` (Postgres connection string)
+- `JWT_SECRET` (long random string)
+- `ENCRYPTION_KEY` (long random string)
+- `NODE_ENV=production`
+- `FRONTEND_URL=https://YOUR_VERCEL_DOMAIN`
 
-## Step 6: Test Your Deployment
+Render free services commonly **sleep after inactivity** → first request can be slow (cold start).
 
-1. Visit your Vercel URL
-2. Sign up for a new account
-3. Connect AWS credentials
-4. Run a scan
-5. Test all features
+### Option B: Koyeb (scale-to-zero free tier)
 
----
+Koyeb can run a Node web service and scale to zero on inactivity (behavior/limits depend on their current free plan).
 
-## Alternative Deployment Options
+Deploy settings are similar to Render:
+- Root: `backend`
+- Build: `npm ci && npx prisma generate && npx prisma db push && npm run build`
+- Start: `npm start`
+- Same env vars as above
 
-### Backend Alternatives:
+### Database (free)
 
-#### **Railway** (Similar to Render)
-- Go to [Railway.app](https://railway.app)
-- Create a new project from GitHub
-- Add PostgreSQL database
-- Configure environment variables
-- Very similar process to Render
+Common free Postgres choices:
+- Supabase (Postgres)
+- Neon (Postgres)
 
-#### **Heroku** (Paid, but reliable)
-- Requires credit card even for free tier
-- More expensive but very stable
-- Good documentation
+Copy the provider’s connection string into `DATABASE_URL`.
 
-### Frontend Alternatives:
+## 3) CORS / env checklist
 
-#### **Netlify**
-- Very similar to Vercel
-- Great free tier
-- Go to [Netlify.com](https://netlify.com)
+Backend must have:
+- `FRONTEND_URL` set to your Vercel URL (locks down CORS in production)
 
-#### **GitHub Pages** (Static only)
-- Free but limited
-- No environment variables support
-- Not recommended for this project
+Frontend must have:
+- `VITE_API_URL` set to your backend URL
 
----
+## 4) Verify in production
 
-## Cost Breakdown
+- Visit the Vercel URL
+- Register/login
+- Connect AWS credentials
+- Run a scan
 
-### Free Tier (Recommended for Testing)
-- **Render**: Free (with limitations: sleeps after 15 min inactivity)
-- **Vercel**: Free (100GB bandwidth/month)
-- **Total**: $0/month
+If the frontend can’t reach the backend:
+- Confirm `VITE_API_URL`
+- Confirm backend logs show it started successfully
+- Confirm `FRONTEND_URL` matches your Vercel origin exactly (scheme + domain)
 
-### Production Tier (For Real Users)
-- **Render**: $7/month (always on + 256MB RAM)
-- **Vercel**: Free tier is usually sufficient
-- **Total**: ~$7/month
-
-### Scale Tier (Many Users)
-- **Render**: $25/month (1GB RAM)
-- **Vercel**: $20/month (Pro plan)
-- **Total**: ~$45/month
-
----
-
-## Important Notes
-
-### ⚠️ Security Considerations
-
-1. **Never commit `.env` files** to GitHub
-2. **Use strong encryption keys** (32+ characters, random)
-3. **Enable HTTPS** (automatic on Render/Vercel)
-4. **Rotate secrets regularly** in production
-
-### 🔄 Automatic Deployments
-
-Both Render and Vercel support automatic deployments:
-- Push to `main` branch → Automatic deployment
-- Create a `dev` branch for testing
-- Use Pull Requests for code review
-
-### 📊 Monitoring
-
-**Render Dashboard**:
-- View logs
-- Monitor CPU/Memory usage
-- Check database connections
-
-**Vercel Dashboard**:
-- View deployment logs
-- Monitor bandwidth usage
-- Check build times
-
----
-
-## Troubleshooting
-
-### Backend won't start
-- Check Render logs for errors
-- Verify DATABASE_URL is correct
-- Ensure Prisma migrations ran successfully
-
-### Frontend can't connect to backend
-- Verify VITE_API_URL is correct
-- Check CORS configuration
-- Ensure backend is running (not sleeping)
-
-### Database connection errors
-- Check DATABASE_URL format
-- Verify database is running
-- Check connection limits
-
-### Render free tier sleeping
-- First request takes 30-60 seconds (cold start)
-- Consider upgrading to paid tier for production
-- Or use Railway which has better free tier
-
----
-
-## Custom Domain (Optional)
-
-### For Frontend (Vercel):
-1. Go to Vercel project settings
-2. Click "Domains"
-3. Add your custom domain
-4. Update DNS records as instructed
-
-### For Backend (Render):
-1. Upgrade to paid plan
-2. Go to service settings
-3. Add custom domain
-4. Update DNS records
-
----
-
-## Next Steps
-
-1. ✅ Deploy backend to Render
-2. ✅ Deploy frontend to Vercel
-3. ✅ Test all functionality
-4. 📝 Share the URL with users
-5. 📊 Monitor usage and performance
-6. 🔄 Set up CI/CD for automatic deployments
-
----
-
-## Support
-
-If you encounter issues:
-- Check Render/Vercel documentation
-- Review deployment logs
-- Verify environment variables
-- Test locally first with production settings
-
-Good luck with your deployment! 🚀

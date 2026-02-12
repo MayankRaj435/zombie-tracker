@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, LogIn, AlertCircle, Shield } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Shield } from 'lucide-react';
 import { HeroParallax } from '../ui/hero-parallax';
 import { MaskContainer } from '../ui/svg-mask-effect';
 

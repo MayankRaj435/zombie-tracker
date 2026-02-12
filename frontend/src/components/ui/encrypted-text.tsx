@@ -36,7 +36,7 @@ export const EncryptedText = ({
 
         const scrambleInterval = setInterval(() => {
             setDisplayText((current) => {
-                return current.map((char, index) => {
+                return current.map((_char, index) => {
                     if (index < localRevealedIndex) {
                         return targetChars[index];
                     }

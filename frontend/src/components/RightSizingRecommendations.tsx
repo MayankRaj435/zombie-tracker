@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Check, DollarSign, TrendingDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { API_URL } from '../config';
 
 interface Recommendation {
     id: string;

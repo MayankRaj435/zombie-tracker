@@ -4,22 +4,22 @@ async function cleanupOldData() {
   console.log('Cleaning up old data without userId...');
   
   try {
-    // Delete all records without userId (old data)
-    const deletedInstances = await prisma.idleInstance.deleteMany({
-      where: { userId: null },
-    });
-    
-    const deletedVolumes = await prisma.orphanedVolume.deleteMany({
-      where: { userId: null },
-    });
-    
-    const deletedEips = await prisma.unattachedEIP.deleteMany({
-      where: { userId: null },
-    });
-    
-    console.log(`Deleted ${deletedInstances.count} idle instances`);
-    console.log(`Deleted ${deletedVolumes.count} orphaned volumes`);
-    console.log(`Deleted ${deletedEips.count} unattached EIPs`);
+    // `userId` is non-nullable in the current Prisma schema, but older databases
+    // could still contain rows with NULL values. Prisma won't allow filtering
+    // by `null` for non-nullable fields, so we use raw SQL.
+    const deletedInstances = await prisma.$executeRawUnsafe(
+      'DELETE FROM "IdleInstance" WHERE "userId" IS NULL'
+    );
+    const deletedVolumes = await prisma.$executeRawUnsafe(
+      'DELETE FROM "OrphanedVolume" WHERE "userId" IS NULL'
+    );
+    const deletedEips = await prisma.$executeRawUnsafe(
+      'DELETE FROM "UnattachedEIP" WHERE "userId" IS NULL'
+    );
+
+    console.log(`Deleted ${deletedInstances} idle instances`);
+    console.log(`Deleted ${deletedVolumes} orphaned volumes`);
+    console.log(`Deleted ${deletedEips} unattached EIPs`);
     console.log('Cleanup complete!');
   } catch (error) {
     console.error('Error cleaning up old data:', error);

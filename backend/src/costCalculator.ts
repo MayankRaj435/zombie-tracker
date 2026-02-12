@@ -1,12 +1,25 @@
 import { PricingClient, GetProductsCommand } from "@aws-sdk/client-pricing";
 
-const pricingClient = new PricingClient({
-  region: "us-east-1", // The pricing API is only available in us-east-1 and ap-south-1
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
+/**
+ * The AWS Pricing API requires signed requests (AWS credentials).
+ *
+ * In this app we use the connected user's AWS credentials so we don't ship
+ * any platform-level AWS keys in environment variables.
+ *
+ * Note: users may need `pricing:GetProducts` permission for accurate pricing.
+ * If they don't have it, we return a graceful "Cost unavailable" string.
+ */
+export interface AwsApiCredentials {
+  accessKeyId: string;
+  secretAccessKey: string;
+}
+
+function createPricingClient(credentials: AwsApiCredentials) {
+  return new PricingClient({
+    region: "us-east-1", // Pricing API is only available in us-east-1 and ap-south-1
+    credentials,
+  });
+}
 
 // Helper function to map human-readable region names to pricing API locations
 const getRegionLocation = (region: string): string => {
@@ -18,8 +31,15 @@ const getRegionLocation = (region: string): string => {
   return regionMap[region] || region;
 };
 
-export async function getEC2InstanceCost(instanceType: string, region: string): Promise<string> {
+export async function getEC2InstanceCost(
+  instanceType: string,
+  region: string,
+  credentials: AwsApiCredentials
+): Promise<string> {
   try {
+    if (!credentials?.accessKeyId || !credentials?.secretAccessKey) return "Cost unavailable";
+
+    const pricingClient = createPricingClient(credentials);
     const command = new GetProductsCommand({
       ServiceCode: "AmazonEC2",
       Filters: [
@@ -34,10 +54,19 @@ export async function getEC2InstanceCost(instanceType: string, region: string): 
     const { PriceList } = await pricingClient.send(command);
 
     if (PriceList && PriceList.length > 0) {
-      const priceData = JSON.parse(PriceList[0] as string);
-      const onDemandTerms = priceData.terms.OnDemand;
-      const priceDimension = Object.values(onDemandTerms)[0] as any;
-      const hourlyPrice = parseFloat(Object.values(priceDimension.priceDimensions)[0].pricePerUnit.USD);
+      // The AWS Pricing API returns a JSON string without a stable TS type.
+      // We treat it as `any` and defensively parse what we need.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const priceData: any = JSON.parse(PriceList[0] as string);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const onDemandTerms: any = priceData?.terms?.OnDemand;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const priceDimension: any = onDemandTerms ? Object.values(onDemandTerms)[0] : undefined;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const firstPriceDim: any = priceDimension?.priceDimensions ? Object.values(priceDimension.priceDimensions)[0] : undefined;
+      const hourlyUsd = firstPriceDim?.pricePerUnit?.USD;
+      const hourlyPrice = hourlyUsd ? parseFloat(hourlyUsd) : NaN;
+      if (!Number.isFinite(hourlyPrice)) return "Cost unavailable";
       
       // Calculate monthly cost (730 hours in a month on average)
       const monthlyCost = hourlyPrice * 730;
@@ -46,12 +75,20 @@ export async function getEC2InstanceCost(instanceType: string, region: string): 
     return "Cost not found";
   } catch (error) {
     console.error(`Error fetching price for EC2 instance ${instanceType}:`, error);
-    return "Error";
+    return "Cost unavailable";
   }
 }
 
-export async function getEBSVolumeCost(volumeType: string, sizeGb: number, region: string): Promise<string> {
+export async function getEBSVolumeCost(
+  volumeType: string,
+  sizeGb: number,
+  region: string,
+  credentials: AwsApiCredentials
+): Promise<string> {
   try {
+    if (!credentials?.accessKeyId || !credentials?.secretAccessKey) return "Cost unavailable";
+
+    const pricingClient = createPricingClient(credentials);
     const command = new GetProductsCommand({
       ServiceCode: "AmazonEC2",
       Filters: [
@@ -63,10 +100,17 @@ export async function getEBSVolumeCost(volumeType: string, sizeGb: number, regio
     const { PriceList } = await pricingClient.send(command);
 
     if (PriceList && PriceList.length > 0) {
-      const priceData = JSON.parse(PriceList[0] as string);
-      const onDemandTerms = priceData.terms.OnDemand;
-      const priceDimension = Object.values(onDemandTerms)[0] as any;
-      const pricePerGbMonth = parseFloat(Object.values(priceDimension.priceDimensions)[0].pricePerUnit.USD);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const priceData: any = JSON.parse(PriceList[0] as string);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const onDemandTerms: any = priceData?.terms?.OnDemand;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const priceDimension: any = onDemandTerms ? Object.values(onDemandTerms)[0] : undefined;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const firstPriceDim: any = priceDimension?.priceDimensions ? Object.values(priceDimension.priceDimensions)[0] : undefined;
+      const usd = firstPriceDim?.pricePerUnit?.USD;
+      const pricePerGbMonth = usd ? parseFloat(usd) : NaN;
+      if (!Number.isFinite(pricePerGbMonth)) return "Cost unavailable";
 
       const monthlyCost = pricePerGbMonth * sizeGb;
       return `$${monthlyCost.toFixed(2)}`;
@@ -74,6 +118,6 @@ export async function getEBSVolumeCost(volumeType: string, sizeGb: number, regio
     return "Cost not found";
   } catch (error) {
     console.error(`Error fetching price for EBS volume ${volumeType}:`, error);
-    return "Error";
+    return "Cost unavailable";
   }
 }

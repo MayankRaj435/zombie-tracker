@@ -15,7 +15,7 @@ import { useAuth } from '../context/AuthContext';
 // framer-motion removed as it was unused
 import { BarChart as BarChartIcon, LineChart as LineChartIcon, Calendar, Activity } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { API_URL } from '../config';
 
 interface StatisticsData {
   date: string;

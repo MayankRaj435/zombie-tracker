@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, User, AlertCircle, Sparkles, UserPlus, ArrowRight } from 'lucide-react';
+import { AlertCircle, Sparkles, ArrowRight } from 'lucide-react';
 import { WavyBackground } from '../ui/wavy-background';
 
 export default function SignUp() {
