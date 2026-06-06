@@ -1,5 +1,5 @@
-import React from 'react';
-import { AlertTriangle, Shield, CheckCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { AlertTriangle, Shield, CheckCircle2 } from 'lucide-react';
 
 interface SecurityIssue {
     id: string;
@@ -14,48 +14,78 @@ interface SecurityAlertsProps {
     issues: SecurityIssue[];
 }
 
-const SecurityAlerts: React.FC<SecurityAlertsProps> = ({ issues }) => {
+const severityClass = {
+    High: 'border-rose-300/20 bg-rose-300/10 text-rose-100',
+    Medium: 'border-amber-300/20 bg-amber-300/10 text-amber-100',
+    Low: 'border-cyan-300/20 bg-cyan-300/10 text-cyan-100',
+};
+
+const SecurityAlerts = ({ issues }: SecurityAlertsProps) => {
     if (!issues || issues.length === 0) {
         return (
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6 backdrop-blur-sm">
-                <div className="flex items-center space-x-2 mb-4">
-                    <Shield className="w-6 h-6 text-green-400" />
-                    <h2 className="text-xl font-bold text-white">Security Alerts</h2>
+            <div className="premium-panel rounded-lg p-5">
+                <div className="mb-5 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="rounded-lg border border-emerald-300/16 bg-emerald-300/10 p-2 text-emerald-200">
+                            <Shield className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <h2 className="font-semibold text-white">Security Alerts</h2>
+                            <p className="text-xs text-slate-500">Guardrail scan results</p>
+                        </div>
+                    </div>
+                    <span className="rounded-full border border-emerald-300/16 bg-emerald-300/10 px-2.5 py-1 text-xs font-semibold text-emerald-200">
+                        Clear
+                    </span>
                 </div>
-                <div className="flex flex-col items-center justify-center p-8 text-center">
-                    <CheckCircle className="w-12 h-12 text-green-500/50 mb-3" />
-                    <p className="text-gray-400">No security issues detected. Great job!</p>
+                <div className="flex flex-col items-center justify-center rounded-lg border border-white/10 bg-white/[0.035] p-8 text-center">
+                    <CheckCircle2 className="mb-3 h-11 w-11 text-emerald-300/70" />
+                    <p className="font-medium text-white">No security issues detected</p>
+                    <p className="mt-1 text-sm text-slate-500">Your latest scan is clean.</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="bg-white/5 border border-white/10 rounded-xl p-6 backdrop-blur-sm">
-            <div className="flex items-center space-x-2 mb-4">
-                <Shield className="w-6 h-6 text-red-500" />
-                <h2 className="text-xl font-bold text-white">Security Alerts ({issues.length})</h2>
+        <div className="premium-panel rounded-lg p-5">
+            <div className="mb-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="rounded-lg border border-rose-300/16 bg-rose-300/10 p-2 text-rose-200">
+                        <Shield className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <h2 className="font-semibold text-white">Security Alerts</h2>
+                        <p className="text-xs text-slate-500">{issues.length} findings need triage</p>
+                    </div>
+                </div>
+                <span className="rounded-full border border-rose-300/16 bg-rose-300/10 px-2.5 py-1 text-xs font-semibold text-rose-200">
+                    Action
+                </span>
             </div>
 
             <div className="space-y-3">
-                {issues.map((issue) => (
-                    <div
+                {issues.slice(0, 4).map((issue, index) => (
+                    <motion.div
                         key={issue.id}
-                        className="flex items-start gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.04 }}
+                        className={`rounded-lg border p-3 ${severityClass[issue.severity]}`}
                     >
-                        <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                        <div>
-                            <h3 className="text-sm font-semibold text-red-200">
-                                {issue.severity} Risk: {issue.groupName || issue.groupId}
-                            </h3>
-                            <p className="text-xs text-red-200/70 mt-1">
-                                {issue.description}
-                            </p>
-                            <p className="text-[10px] text-gray-500 mt-2">
-                                Detected: {new Date(issue.createdAt).toLocaleDateString()}
-                            </p>
+                        <div className="flex items-start gap-3">
+                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                            <div className="min-w-0">
+                                <h3 className="text-sm font-semibold">
+                                    {issue.severity} Risk: {issue.groupName || issue.groupId}
+                                </h3>
+                                <p className="mt-1 text-xs leading-5 opacity-75">{issue.description}</p>
+                                <p className="mt-2 text-[0.68rem] uppercase tracking-[0.14em] opacity-50">
+                                    Detected {new Date(issue.createdAt).toLocaleDateString()}
+                                </p>
+                            </div>
                         </div>
-                    </div>
+                    </motion.div>
                 ))}
             </div>
         </div>

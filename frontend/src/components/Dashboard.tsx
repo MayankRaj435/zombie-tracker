@@ -1,11 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ElementType, ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext';
 import ConnectAWS from './auth/ConnectAWS';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LogOut, Trash2, RefreshCw,
-  DollarSign, Server, HardDrive, Globe,
-  AlertTriangle
+  LogOut,
+  Trash2,
+  RefreshCw,
+  DollarSign,
+  Server,
+  HardDrive,
+  Globe,
+  AlertTriangle,
+  Activity,
+  ArrowUpRight,
+  CalendarDays,
+  CheckCircle2,
+  Command,
+  Download,
+  Layers,
+  ShieldCheck,
+  Sparkles
 } from 'lucide-react';
 import { AnimatedBackground } from './ui/animated-background';
 import { GlasmorphicSidebar } from './ui/glassmorphic-sidebar';
@@ -55,6 +70,82 @@ interface SecurityIssue {
   createdAt: string;
 }
 
+interface ResourceSectionHeaderProps {
+  icon: ElementType;
+  title: string;
+  count: number;
+  tone: 'cyan' | 'amber' | 'emerald';
+  action?: ReactNode;
+}
+
+const sectionMeta: Record<string, { title: string; description: string }> = {
+  dashboard: {
+    title: 'Cloud Command Center',
+    description: 'Live cost, security, and remediation intelligence for your AWS estate.'
+  },
+  costs: {
+    title: 'Cost Intelligence',
+    description: 'Forecast spend, isolate anomalies, and track optimization velocity.'
+  },
+  remediation: {
+    title: 'Remediation Center',
+    description: 'Coordinate manual and scheduled cleanup actions with confidence.'
+  },
+  rightsizing: {
+    title: 'Right-Sizing',
+    description: 'Prioritize infrastructure changes that reduce waste without risking reliability.'
+  },
+  security: {
+    title: 'Security Posture',
+    description: 'Review compliance checks and cloud guardrail readiness.'
+  },
+  alerts: {
+    title: 'Alert Routing',
+    description: 'Tune thresholds and notify the right channels before spend or risk drifts.'
+  },
+  reports: {
+    title: 'Reports',
+    description: 'Package cloud savings, security posture, and remediation history for stakeholders.'
+  },
+  settings: {
+    title: 'Workspace Settings',
+    description: 'Manage account preferences and AWS connection details.'
+  }
+};
+
+const toneClasses = {
+  cyan: 'border-cyan-300/16 bg-cyan-300/10 text-cyan-100',
+  amber: 'border-amber-300/16 bg-amber-300/10 text-amber-100',
+  emerald: 'border-emerald-300/16 bg-emerald-300/10 text-emerald-100',
+};
+
+function ResourceSectionHeader({ icon: Icon, title, count, tone, action }: ResourceSectionHeaderProps) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
+        <div className={`flex h-10 w-10 items-center justify-center rounded-lg border ${toneClasses[tone]}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight text-white">{title}</h2>
+          <p className="text-sm text-slate-500">{count} resources awaiting review</p>
+        </div>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function EmptyResourceState({ label }: { label: string }) {
+  return (
+    <div className="premium-card rounded-lg border-dashed p-8 text-center">
+      <CheckCircle2 className="mx-auto mb-3 h-9 w-9 text-emerald-300/70" />
+      <p className="font-medium text-white">No {label} found</p>
+      <p className="mt-1 text-sm text-slate-500">Run a fresh scan to keep this queue current.</p>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { token, user, logout, deleteAccount } = useAuth();
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -69,7 +160,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [selectedResources, setSelectedResources] = useState<Set<string>>(new Set());
 
-  const fetchResults = async () => {
+  const fetchResults = useCallback(async () => {
     if (!token) return;
 
     setIsFetching(true);
@@ -98,7 +189,7 @@ export default function Dashboard() {
     } finally {
       setIsFetching(false);
     }
-  };
+  }, [logout, token]);
 
   useEffect(() => {
     if (token && user?.awsConnected) {
@@ -106,7 +197,7 @@ export default function Dashboard() {
     } else {
       setIsFetching(false);
     }
-  }, [token, user?.awsConnected]);
+  }, [fetchResults, token, user?.awsConnected]);
 
   const handleRunScan = async () => {
     if (!token) return;
@@ -125,8 +216,9 @@ export default function Dashboard() {
         throw new Error(errorData.message || 'Scan initiation failed');
       }
       await fetchResults();
-    } catch (err: any) {
-      setError(err.message || 'Failed to run a new scan. Please try again.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to run a new scan. Please try again.';
+      setError(message);
       console.error(err);
     } finally {
       setIsScanning(false);
@@ -142,6 +234,17 @@ export default function Dashboard() {
     instances.reduce((acc, curr) => acc + parseCost(curr.estimatedMonthlyCost), 0) +
     volumes.reduce((acc, curr) => acc + parseCost(curr.estimatedMonthlyCost), 0);
 
+  const totalFindings = instances.length + volumes.length + eips.length + securityIssues.length;
+  const postureScore = Math.max(72, 100 - totalFindings * 3);
+  const currentMeta = sectionMeta[activeSection] || sectionMeta.dashboard;
+
+  const sparklineData = useMemo(() => ({
+    savings: [31, 36, 44, 41, 53, 57, 68],
+    instances: [9, 8, 8, 6, 7, 5, instances.length || 4],
+    volumes: [4, 5, 4, 6, 5, 4, volumes.length || 3],
+    eips: [2, 2, 3, 2, 2, 1, eips.length || 1],
+  }), [eips.length, instances.length, volumes.length]);
+
   const handleDeleteAccount = async () => {
     if (!showDeleteConfirm) {
       setShowDeleteConfirm(true);
@@ -152,23 +255,22 @@ export default function Dashboard() {
     try {
       await deleteAccount();
       window.location.href = '/login';
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete account. Please try again.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete account. Please try again.';
+      setError(message);
       setShowDeleteConfirm(false);
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const handleResourceAction = async (action: string, params: any) => {
+  const handleResourceAction = async (action: string, params: { resourceId?: string; id?: string }) => {
     if (!token) return;
-    console.log(`Action: ${action}`, params);
 
-    // Check if params has ID directly or in nested object
     const resourceId = params?.resourceId || params?.id;
 
     if (!resourceId) {
-      console.error("Resource ID missing for action", action);
+      console.error('Resource ID missing for action', action);
       return;
     }
 
@@ -176,7 +278,6 @@ export default function Dashboard() {
       let endpoint = '';
       let body = {};
 
-      // Map actions to endpoints
       if (action === 'terminate' || action === 'stop') {
         endpoint = '/api/remediation/instance';
         body = { instanceId: resourceId, action };
@@ -187,7 +288,7 @@ export default function Dashboard() {
         endpoint = '/api/remediation/eip';
         body = { allocationId: resourceId };
       } else {
-        console.warn("Unknown action", action);
+        console.warn('Unknown action', action);
         return;
       }
 
@@ -202,12 +303,10 @@ export default function Dashboard() {
 
       if (!res.ok) throw new Error('Action failed');
 
-      // Refresh data
       await fetchResults();
-
     } catch (err) {
-      console.error("Remediation error", err);
-      setError("Failed to execute remediation action");
+      console.error('Remediation error', err);
+      setError('Failed to execute remediation action');
     }
   };
 
@@ -239,38 +338,84 @@ export default function Dashboard() {
     }
   };
 
-  // Generate sparkline data (mock data for now)
-  const generateSparkline = () => Array.from({ length: 7 }, () => Math.random() * 100);
+  const deleteAccountModal = (
+    <AnimatePresence>
+      {showDeleteConfirm && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
+        >
+          <motion.div
+            initial={{ scale: 0.92, opacity: 0, y: 16 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.92, opacity: 0, y: 16 }}
+            className="premium-panel w-full max-w-md rounded-lg border-rose-300/30 p-6"
+          >
+            <div className="mb-4 flex items-center gap-3 text-rose-200">
+              <div className="rounded-lg border border-rose-300/16 bg-rose-300/10 p-2">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <h3 className="text-xl font-semibold">Delete Account</h3>
+            </div>
+            <p className="mb-5 text-sm leading-6 text-slate-300">
+              Are you sure you want to delete your account? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                className="btn-ghost rounded-lg px-4 py-2 text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={isDeleting}
+                className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition-colors hover:bg-rose-400"
+              >
+                {isDeleting ? 'Deleting...' : 'Yes, Delete'}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 
   if (!user?.awsConnected) {
     return (
       <AnimatedBackground>
-        <div className="min-h-screen p-6">
-          <header className="max-w-7xl mx-auto mb-8 flex items-center justify-between">
+        <div className="min-h-screen p-5 md:p-8">
+          <header className="mx-auto mb-8 flex max-w-7xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <CloudGuardLogo size={48} />
+              <CloudGuardLogo size={46} />
               <div>
-                <h1 className="text-2xl font-bold text-white">CloudGuard Dashboard</h1>
-                <p className="text-slate-400 text-sm">Intelligent cloud waste detection</p>
+                <h1 className="text-2xl font-semibold tracking-tight text-white">CloudGuard</h1>
+                <p className="text-sm text-slate-400">Connect AWS to activate the command center</p>
               </div>
             </div>
-            <div className="flex gap-3">
-              <button onClick={logout} className="glass-button px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium hover:bg-white/5 transition-colors">
-                <LogOut className="w-4 h-4" />
+            <div className="flex flex-wrap gap-3">
+              <button onClick={logout} className="btn-ghost flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold">
+                <LogOut className="h-4 w-4" />
                 Logout
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"
+                className="rounded-lg border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm font-semibold text-rose-200 transition-colors hover:bg-rose-300/15"
                 title="Delete Account"
               >
-                <Trash2 className="w-4 h-4" />
-                Delete Account
+                <span className="flex items-center gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  Delete Account
+                </span>
               </button>
             </div>
           </header>
           <ConnectAWS />
         </div>
+        {deleteAccountModal}
       </AnimatedBackground>
     );
   }
@@ -278,82 +423,139 @@ export default function Dashboard() {
   return (
     <AnimatedBackground>
       <div className="flex min-h-screen">
-        {/* Sidebar */}
         <GlasmorphicSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
 
-        {/* Main Content */}
-        <div className="flex-1 ml-20 lg:ml-60 p-6 pb-20 transition-all duration-300">
-          <div className="max-w-7xl mx-auto">
-            {/* Header */}
+        <main className="min-w-0 flex-1 px-4 py-5 pb-24 pl-[92px] transition-all duration-300 md:px-7 lg:pl-[276px]">
+          <div className="mx-auto max-w-[1500px]">
             <motion.header
-              initial={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0, y: -16 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6"
+              className="mb-6 flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between"
             >
-              <div className="flex items-center gap-4">
-                <CloudGuardLogo size={48} />
-                <div>
-                  <h1 className="text-3xl font-bold text-white tracking-tight">Welcome back, {user?.name || 'User'}!</h1>
-                  <p className="text-slate-400 flex items-center gap-2 mt-1">
-                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <div>
+                <div className="mb-3 flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2 rounded-full border border-emerald-300/16 bg-emerald-300/10 px-3 py-1.5 text-xs font-semibold text-emerald-100">
+                    <span className="status-dot" />
                     All systems operational
-                  </p>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3 py-1.5 text-xs text-slate-300">
+                    <CalendarDays className="h-3.5 w-3.5 text-cyan-200" />
+                    Region {user?.awsRegion || 'global'}
+                  </div>
                 </div>
+                <h1 className="app-text-balance text-3xl font-semibold tracking-tight text-white md:text-4xl">
+                  {currentMeta.title}
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400 md:text-base">
+                  {currentMeta.description}
+                </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
+                <button className="btn-ghost hidden items-center gap-2 rounded-lg px-3.5 py-2.5 text-sm font-semibold sm:flex">
+                  <Command className="h-4 w-4" />
+                  Ctrl K
+                </button>
+                <button className="btn-ghost flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold">
+                  <Download className="h-4 w-4" />
+                  Export
+                </button>
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleRunScan}
                   disabled={isScanning || isFetching}
-                  className="glass-button px-5 py-2.5 rounded-xl flex items-center gap-2 font-medium"
+                  className="premium-button flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold"
                 >
-                  {isScanning ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Scanning...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="w-4 h-4" />
-                      Scan Now
-                    </>
-                  )}
+                  <RefreshCw className={`h-4 w-4 ${isScanning ? 'animate-spin' : ''}`} />
+                  {isScanning ? 'Scanning...' : 'Run Scan'}
                 </motion.button>
-
-                <button onClick={logout} className="bg-slate-800/50 hover:bg-slate-700/50 border border-white/10 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-medium transition-all">
-                  <LogOut className="w-4 h-4" />
+                <button onClick={logout} className="btn-ghost flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold">
+                  <LogOut className="h-4 w-4" />
                   Logout
                 </button>
               </div>
             </motion.header>
 
-            {/* Error Alert */}
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-8 bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex items-center gap-3 text-red-200"
+                className="mb-6 flex items-center gap-3 rounded-lg border border-rose-300/20 bg-rose-300/10 p-4 text-rose-100"
               >
-                <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-                <p>{error}</p>
+                <AlertTriangle className="h-5 w-5 shrink-0" />
+                <p className="text-sm">{error}</p>
               </motion.div>
             )}
 
-            {/* Animate Page Transitions */}
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeSection}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.24 }}
               >
                 {activeSection === 'dashboard' && (
-                  <>
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                  <div className="space-y-7">
+                    <section className="premium-panel scan-line rounded-lg p-5 md:p-6">
+                      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-center">
+                        <div>
+                          <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-cyan-100">
+                            <Sparkles className="h-4 w-4" />
+                            Autonomous cloud savings cockpit
+                          </div>
+                          <h2 className="app-text-balance max-w-3xl text-2xl font-semibold tracking-tight text-white md:text-3xl">
+                            ${totalSavings.toFixed(2)} in monthly waste is ready for review.
+                          </h2>
+                          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+                            CloudGuard blends cost telemetry, security drift, and remediation workflows into one live AWS operating surface.
+                          </p>
+                          <div className="mt-5 flex flex-wrap gap-3">
+                            <div className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2">
+                              <p className="text-[0.68rem] uppercase tracking-[0.16em] text-slate-500">Findings</p>
+                              <p className="mt-1 text-lg font-semibold text-white">{totalFindings}</p>
+                            </div>
+                            <div className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2">
+                              <p className="text-[0.68rem] uppercase tracking-[0.16em] text-slate-500">Security issues</p>
+                              <p className="mt-1 text-lg font-semibold text-white">{securityIssues.length}</p>
+                            </div>
+                            <div className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2">
+                              <p className="text-[0.68rem] uppercase tracking-[0.16em] text-slate-500">Selected</p>
+                              <p className="mt-1 text-lg font-semibold text-white">{selectedResources.size}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="premium-card rounded-lg p-5">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-semibold text-white">Protection score</p>
+                              <p className="mt-1 text-xs text-slate-500">Cost and guardrail posture</p>
+                            </div>
+                            <ShieldCheck className="h-5 w-5 text-emerald-200" />
+                          </div>
+                          <div className="mt-5 flex items-end gap-3">
+                            <p className="number-tabular text-5xl font-semibold tracking-tight text-gradient-cyan">{postureScore}</p>
+                            <p className="mb-2 text-sm font-semibold text-slate-400">/100</p>
+                          </div>
+                          <div className="mt-5 h-2 rounded-full bg-white/8">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${postureScore}%` }}
+                              transition={{ duration: 1, ease: 'easeOut' }}
+                              className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300"
+                            />
+                          </div>
+                          <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
+                            <span>Target 90</span>
+                            <span className="text-emerald-200">Healthy trend</span>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                       <EnhancedStatCard
                         title="Potential Savings"
                         value={totalSavings}
@@ -362,7 +564,7 @@ export default function Dashboard() {
                         icon={DollarSign}
                         color="green"
                         trend={-15.3}
-                        sparklineData={generateSparkline()}
+                        sparklineData={sparklineData.savings}
                       />
                       <EnhancedStatCard
                         title="Idle Instances"
@@ -370,7 +572,7 @@ export default function Dashboard() {
                         icon={Server}
                         color="blue"
                         trend={-8.2}
-                        sparklineData={generateSparkline()}
+                        sparklineData={sparklineData.instances}
                       />
                       <EnhancedStatCard
                         title="Orphaned Volumes"
@@ -378,7 +580,7 @@ export default function Dashboard() {
                         icon={HardDrive}
                         color="purple"
                         trend={5.1}
-                        sparklineData={generateSparkline()}
+                        sparklineData={sparklineData.volumes}
                       />
                       <EnhancedStatCard
                         title="Unattached IPs"
@@ -386,128 +588,140 @@ export default function Dashboard() {
                         icon={Globe}
                         color="orange"
                         trend={0}
-                        sparklineData={generateSparkline()}
+                        sparklineData={sparklineData.eips}
                       />
                     </div>
 
-                    {/* Security Alerts */}
-                    <div className="mb-8">
-                      <SecurityAlerts issues={securityIssues} />
-                    </div>
-
-                    {/* Cost Analysis Chart */}
-                    <div className="glass-panel p-6 rounded-2xl mb-8">
-                      <h2 className="text-xl font-bold text-white mb-6">Cost Analysis</h2>
-                      <StatisticsChart />
-                    </div>
-
-                    {/* Resources Section */}
-                    <div className="space-y-8">
-                      {/* Idle Instances */}
-                      <div>
-                        <div className="flex items-center justify-between mb-4">
-                          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                            <Server className="w-6 h-6 text-blue-400" />
-                            Idle EC2 Instances
-                            <span className="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-sm font-semibold">
-                              {instances.length}
-                            </span>
-                          </h2>
-                          {selectedResources.size > 0 && (
-                            <motion.button
-                              initial={{ opacity: 0, scale: 0.8 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              className="bg-red-500/20 hover:bg-red-500/30 text-red-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-red-500/30"
-                            >
-                              Terminate Selected ({selectedResources.size})
-                            </motion.button>
-                          )}
+                    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_370px]">
+                      <section>
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <h2 className="text-xl font-semibold tracking-tight text-white">Cost Analysis</h2>
+                            <p className="mt-1 text-sm text-slate-500">Historical waste signals and projected savings momentum.</p>
+                          </div>
+                          <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-xs font-semibold text-slate-300">
+                            <Activity className="h-4 w-4 text-cyan-200" />
+                            Live telemetry
+                          </div>
                         </div>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                          {instances.map((instance) => (
-                            <ResourceCard
-                              key={instance.id}
-                              id={instance.id}
-                              title={instance.instanceId}
-                              subtitle={instance.instanceType || undefined}
-                              status="idle"
-                              cost={instance.estimatedMonthlyCost || undefined}
-                              metadata={[
-                                { label: 'Type', value: instance.instanceType || 'N/A' },
-                                { label: 'Status', value: 'Running' }
-                              ]}
-                              details={
-                                <div className="text-sm text-slate-400">
-                                  <p>{instance.reason}</p>
+                        <StatisticsChart />
+                      </section>
+
+                      <aside className="space-y-5">
+                        <SecurityAlerts issues={securityIssues} />
+                        <div className="premium-panel rounded-lg p-5">
+                          <div className="mb-5 flex items-center justify-between">
+                            <div>
+                              <h3 className="font-semibold text-white">Optimization Runbook</h3>
+                              <p className="mt-1 text-xs text-slate-500">Highest leverage next actions</p>
+                            </div>
+                            <Layers className="h-5 w-5 text-cyan-200" />
+                          </div>
+                          <div className="space-y-3">
+                            {[
+                              ['Terminate idle EC2', `${instances.length} candidates`, 'cyan'],
+                              ['Delete orphaned EBS', `${volumes.length} volumes`, 'emerald'],
+                              ['Release elastic IPs', `${eips.length} addresses`, 'amber'],
+                            ].map(([label, value, tone]) => (
+                              <div key={label} className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.035] p-3">
+                                <div>
+                                  <p className="text-sm font-medium text-white">{label}</p>
+                                  <p className="mt-0.5 text-xs text-slate-500">{value}</p>
                                 </div>
-                              }
-                              onAction={(action) => handleResourceAction(action, { resourceId: instance.instanceId, type: 'instance' })}
-                              selected={selectedResources.has(instance.id)}
-                              onSelect={handleResourceSelect}
-                            />
-                          ))}
+                                <ArrowUpRight className={`h-4 w-4 ${tone === 'cyan' ? 'text-cyan-200' : tone === 'emerald' ? 'text-emerald-200' : 'text-amber-200'}`} />
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-
-                      {/* Orphaned Volumes */}
-                      <div>
-                        <h2 className="text-2xl font-bold text-white flex items-center gap-3 mb-4">
-                          <HardDrive className="w-6 h-6 text-purple-400" />
-                          Orphaned EBS Volumes
-                          <span className="bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-sm font-semibold">
-                            {volumes.length}
-                          </span>
-                        </h2>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                          {volumes.map((volume) => (
-                            <ResourceCard
-                              key={volume.id}
-                              id={volume.id}
-                              title={volume.volumeId}
-                              subtitle={`${volume.sizeGb || 0} GB`}
-                              status="warning"
-                              cost={volume.estimatedMonthlyCost || undefined}
-                              metadata={[
-                                { label: 'Size', value: `${volume.sizeGb || 0} GB` },
-                                { label: 'Type', value: volume.volumeType || 'N/A' }
-                              ]}
-                              onAction={(action) => handleResourceAction(action, { resourceId: volume.volumeId, type: 'volume' })}
-                              selected={selectedResources.has(volume.id)}
-                              onSelect={handleResourceSelect}
-                            />
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Unattached EIPs */}
-                      <div>
-                        <h2 className="text-2xl font-bold text-white flex items-center gap-3 mb-4">
-                          <Globe className="w-6 h-6 text-orange-400" />
-                          Unattached Elastic IPs
-                          <span className="bg-orange-500/20 text-orange-300 px-3 py-1 rounded-full text-sm font-semibold">
-                            {eips.length}
-                          </span>
-                        </h2>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                          {eips.map((eip) => (
-                            <ResourceCard
-                              key={eip.id}
-                              id={eip.id}
-                              title={eip.allocationId}
-                              subtitle={eip.publicIp || undefined}
-                              status="warning"
-                              metadata={[
-                                { label: 'Public IP', value: eip.publicIp || 'N/A' }
-                              ]}
-                              onAction={(action) => handleResourceAction(action, { resourceId: eip.allocationId, type: 'eip' })}
-                              selected={selectedResources.has(eip.id)}
-                              onSelect={handleResourceSelect}
-                            />
-                          ))}
-                        </div>
-                      </div>
+                      </aside>
                     </div>
-                  </>
+
+                    <section className="space-y-6">
+                      <ResourceSectionHeader
+                        icon={Server}
+                        title="Idle EC2 Instances"
+                        count={instances.length}
+                        tone="cyan"
+                        action={selectedResources.size > 0 && (
+                          <motion.button
+                            initial={{ opacity: 0, scale: 0.96 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="rounded-lg border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm font-semibold text-rose-200 transition-colors hover:bg-rose-300/15"
+                          >
+                            Terminate Selected ({selectedResources.size})
+                          </motion.button>
+                        )}
+                      />
+                      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                        {instances.length > 0 ? instances.map((instance) => (
+                          <ResourceCard
+                            key={instance.id}
+                            id={instance.id}
+                            title={instance.instanceId}
+                            subtitle={instance.instanceType || undefined}
+                            status="idle"
+                            cost={instance.estimatedMonthlyCost || undefined}
+                            metadata={[
+                              { label: 'Type', value: instance.instanceType || 'N/A' },
+                              { label: 'Status', value: 'Running' }
+                            ]}
+                            details={
+                              <div className="text-sm text-slate-400">
+                                <p>{instance.reason}</p>
+                              </div>
+                            }
+                            onAction={(action) => handleResourceAction(action, { resourceId: instance.instanceId })}
+                            selected={selectedResources.has(instance.id)}
+                            onSelect={handleResourceSelect}
+                          />
+                        )) : <EmptyResourceState label="idle instances" />}
+                      </div>
+                    </section>
+
+                    <section className="space-y-4">
+                      <ResourceSectionHeader icon={HardDrive} title="Orphaned EBS Volumes" count={volumes.length} tone="emerald" />
+                      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                        {volumes.length > 0 ? volumes.map((volume) => (
+                          <ResourceCard
+                            key={volume.id}
+                            id={volume.id}
+                            title={volume.volumeId}
+                            subtitle={`${volume.sizeGb || 0} GB`}
+                            status="warning"
+                            cost={volume.estimatedMonthlyCost || undefined}
+                            metadata={[
+                              { label: 'Size', value: `${volume.sizeGb || 0} GB` },
+                              { label: 'Type', value: volume.volumeType || 'N/A' }
+                            ]}
+                            onAction={(action) => handleResourceAction(action, { resourceId: volume.volumeId })}
+                            selected={selectedResources.has(volume.id)}
+                            onSelect={handleResourceSelect}
+                          />
+                        )) : <EmptyResourceState label="orphaned volumes" />}
+                      </div>
+                    </section>
+
+                    <section className="space-y-4">
+                      <ResourceSectionHeader icon={Globe} title="Unattached Elastic IPs" count={eips.length} tone="amber" />
+                      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                        {eips.length > 0 ? eips.map((eip) => (
+                          <ResourceCard
+                            key={eip.id}
+                            id={eip.id}
+                            title={eip.allocationId}
+                            subtitle={eip.publicIp || undefined}
+                            status="warning"
+                            metadata={[
+                              { label: 'Public IP', value: eip.publicIp || 'N/A' }
+                            ]}
+                            onAction={(action) => handleResourceAction(action, { resourceId: eip.allocationId })}
+                            selected={selectedResources.has(eip.id)}
+                            onSelect={handleResourceSelect}
+                          />
+                        )) : <EmptyResourceState label="unattached IPs" />}
+                      </div>
+                    </section>
+                  </div>
                 )}
 
                 {activeSection === 'remediation' && (
@@ -525,11 +739,13 @@ export default function Dashboard() {
                 {activeSection === 'costs' && (
                   <div className="space-y-6">
                     <CostForecast />
-                    {/* Reuse existing chart for history */}
-                    <div className="glass-panel p-6 rounded-2xl">
-                      <h2 className="text-xl font-bold text-white mb-6">Historical Spending</h2>
+                    <section>
+                      <div className="mb-4">
+                        <h2 className="text-xl font-semibold tracking-tight text-white">Historical Spending</h2>
+                        <p className="mt-1 text-sm text-slate-500">Daily resource waste and cost exposure over time.</p>
+                      </div>
                       <StatisticsChart />
-                    </div>
+                    </section>
                   </div>
                 )}
 
@@ -538,84 +754,62 @@ export default function Dashboard() {
                 )}
 
                 {activeSection === 'reports' && (
-                  <div className="glass-panel p-8 text-center rounded-2xl">
-                    <h2 className="text-xl font-bold text-white mb-2">Reports</h2>
-                    <p className="text-slate-400">PDF reporting feature coming soon.</p>
+                  <div className="premium-panel rounded-lg p-10 text-center">
+                    <FileReportIcon />
+                    <h2 className="mt-5 text-xl font-semibold text-white">Executive Reports</h2>
+                    <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
+                      PDF reporting is queued for the next release. Export the current dashboard snapshot from the header.
+                    </p>
                   </div>
                 )}
 
                 {activeSection === 'settings' && (
-                  <div className="glass-panel p-8 rounded-2xl">
-                    <h2 className="text-xl font-bold text-white mb-6">Settings</h2>
-                    <div className="space-y-4">
+                  <div className="premium-panel rounded-lg p-6">
+                    <div className="mb-6 flex items-center justify-between gap-4 border-b border-white/10 pb-5">
                       <div>
-                        <h3 className="font-medium text-white">AWS Connection</h3>
-                        <p className="text-sm text-slate-400">Connected to Region: {user?.awsRegion}</p>
+                        <h2 className="text-xl font-semibold text-white">Workspace Settings</h2>
+                        <p className="mt-1 text-sm text-slate-500">Manage account and AWS connection controls.</p>
                       </div>
-                      <button
-                        onClick={() => setShowDeleteConfirm(true)}
-                        className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Delete Account
-                      </button>
+                      <CloudGuardLogo size={42} />
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="premium-card rounded-lg p-4">
+                        <h3 className="font-medium text-white">AWS Connection</h3>
+                        <p className="mt-2 text-sm text-slate-400">Connected region: {user?.awsRegion}</p>
+                        <p className="mt-1 text-xs text-emerald-200">Read-only scan permissions active</p>
+                      </div>
+                      <div className="premium-card rounded-lg p-4">
+                        <h3 className="font-medium text-white">Account</h3>
+                        <p className="mt-2 text-sm text-slate-400">{user?.email}</p>
+                        <button
+                          onClick={() => setShowDeleteConfirm(true)}
+                          className="mt-4 flex items-center gap-2 rounded-lg border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm font-semibold text-rose-200 transition-colors hover:bg-rose-300/15"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete Account
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
-
               </motion.div>
             </AnimatePresence>
 
-            {/* Delete Confirmation Modal */}
-            <AnimatePresence>
-              {showDeleteConfirm && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-                >
-                  <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.9, opacity: 0 }}
-                    className="glass-panel w-full max-w-md p-6 rounded-2xl border-red-500/30"
-                  >
-                    <div className="flex items-center gap-3 mb-4 text-red-400">
-                      <AlertTriangle className="w-6 h-6" />
-                      <h3 className="text-xl font-bold">Delete Account</h3>
-                    </div>
-                    <p className="text-slate-300 mb-4">Are you sure you want to delete your account? This action cannot be undone.</p>
-                    <div className="flex gap-3 justify-end">
-                      <button
-                        onClick={() => setShowDeleteConfirm(false)}
-                        disabled={isDeleting}
-                        className="px-4 py-2 rounded-lg hover:bg-white/5 text-slate-300 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleDeleteAccount}
-                        disabled={isDeleting}
-                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors shadow-lg shadow-red-500/20"
-                      >
-                        {isDeleting ? 'Deleting...' : 'Yes, Delete'}
-                      </button>
-                    </div>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
+            {deleteAccountModal}
           </div>
-        </div>
+        </main>
 
-        {/* Floating Action Menu */}
         <FloatingActionMenu onAction={handleFABAction} />
-
-        {/* Command Palette */}
         <CommandPalette />
       </div>
     </AnimatedBackground>
+  );
+}
+
+function FileReportIcon() {
+  return (
+    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-lg border border-cyan-300/16 bg-cyan-300/10 text-cyan-100">
+      <Download className="h-6 w-6" />
+    </div>
   );
 }

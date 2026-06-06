@@ -6,7 +6,7 @@
  * silently pointing production builds at localhost.
  */
 function requireViteEnv(name: string): string {
-  const v = (import.meta as any).env?.[name] as string | undefined;
+  const v = import.meta.env[name];
   if (!v || typeof v !== 'string' || v.trim().length === 0) {
     throw new Error(`Missing required environment variable: ${name}`);
   }

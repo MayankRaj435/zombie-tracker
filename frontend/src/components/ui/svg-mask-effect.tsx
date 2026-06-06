@@ -1,7 +1,16 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { cn } from "../../lib/utils";
+
+interface MaskContainerProps {
+    children?: ReactNode;
+    revealText?: ReactNode;
+    size?: number;
+    revealSize?: number;
+    className?: string;
+}
 
 export const MaskContainer = ({
     children,
@@ -9,67 +18,52 @@ export const MaskContainer = ({
     size = 10,
     revealSize = 600,
     className,
-}: {
-    children?: React.ReactNode;
-    revealText?: React.ReactNode;
-    size?: number;
-    revealSize?: number;
-    className?: string;
-}) => {
+}: MaskContainerProps) => {
     const [isHovered, setIsHovered] = useState(false);
-    const [mousePosition, setMousePosition] = useState<any>({ x: null, y: null });
-    const containerRef = useRef<any>(null);
-    const updateMousePosition = (e: any) => {
-        const rect = containerRef.current.getBoundingClientRect();
-        setMousePosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-    };
+    const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+    const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (!containerRef.current) return;
-        containerRef.current.addEventListener("mousemove", updateMousePosition);
-        return () => {
-            if (containerRef.current) {
-                containerRef.current.removeEventListener(
-                    "mousemove",
-                    updateMousePosition
-                );
-            }
-        };
-    }, []);
+        const container = containerRef.current;
+        if (!container) return;
 
+        const updateMousePosition = (event: MouseEvent) => {
+            const rect = container.getBoundingClientRect();
+            setMousePosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+        };
+
+        container.addEventListener("mousemove", updateMousePosition);
+        return () => container.removeEventListener("mousemove", updateMousePosition);
+    }, []);
 
     return (
         <motion.div
             ref={containerRef}
-            className={cn("h-full relative overflow-hidden", className)}
+            className={cn("relative h-full overflow-hidden", className)}
             animate={{
-                backgroundColor: isHovered ? "var(--slate-900)" : "var(--slate-900)",
+                backgroundColor: "var(--slate-900)",
             }}
         >
             <motion.div
-                className="w-full h-full flex items-center justify-center text-6xl absolute text-white"
+                className="absolute flex h-full w-full items-center justify-center text-6xl text-white"
                 animate={{
                     clipPath: isHovered
-                        ? `circle(${revealSize}px at ${mousePosition.x ?? 0}px ${mousePosition.y ?? 0}px)`
-                        : `circle(${size}px at ${mousePosition.x ?? 0}px ${mousePosition.y ?? 0}px)`,
+                        ? `circle(${revealSize}px at ${mousePosition.x}px ${mousePosition.y}px)`
+                        : `circle(${size}px at ${mousePosition.x}px ${mousePosition.y}px)`,
                 }}
                 transition={{ type: "tween", ease: "backOut", duration: 0.1 }}
             >
-                <div className="absolute inset-0 bg-black/50 h-full w-full z-0" />
+                <div className="absolute inset-0 z-0 h-full w-full bg-black/50" />
                 <div
-                    onMouseEnter={() => {
-                        setIsHovered(true);
-                    }}
-                    onMouseLeave={() => {
-                        setIsHovered(false);
-                    }}
-                    className="max-w-4xl mx-auto text-center text-white text-4xl font-bold relative z-20"
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
+                    className="relative z-20 mx-auto max-w-4xl text-center text-4xl font-bold text-white"
                 >
                     {children}
                 </div>
             </motion.div>
 
-            <div className="w-full h-full flex items-center justify-center text-white">
+            <div className="flex h-full w-full items-center justify-center text-white">
                 {revealText}
             </div>
         </motion.div>

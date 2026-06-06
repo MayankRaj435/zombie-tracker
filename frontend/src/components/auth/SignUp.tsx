@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Sparkles, ArrowRight } from 'lucide-react';
-import { WavyBackground } from '../ui/wavy-background';
+import { AlertCircle, ArrowRight, Mail, Lock, User, Sparkles } from 'lucide-react';
+import { CloudGuardLogo } from '../ui/cloudguard-logo';
+import { AuthVisualPanel } from './AuthVisualPanel';
 
 export default function SignUp() {
   const [email, setEmail] = useState('');
@@ -15,7 +17,7 @@ export default function SignUp() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -34,47 +36,42 @@ export default function SignUp() {
     try {
       await register(email, password, name || undefined);
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Registration failed. Please try again.';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-slate-950 overflow-hidden">
-      {/* Left Side (Visuals) - Hidden on mobile, Wavy Background here */}
-      <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
-        <WavyBackground className="max-w-4xl mx-auto pb-40">
-          <p className="text-2xl md:text-4xl lg:text-7xl text-white font-bold inter-var text-center">
-            Hero waves are cool
-          </p>
-          <p className="text-base md:text-lg mt-4 text-white font-normal inter-var text-center">
-            Leverage the power of canvas to create a beautiful hero section
-          </p>
-        </WavyBackground>
-      </div>
+    <div className="premium-shell flex min-h-screen w-full overflow-hidden">
+      <AuthVisualPanel
+        title="Launch a sharper AWS cost and security practice."
+        description="Connect your cloud estate, surface waste, and build a remediation rhythm your finance and platform teams can trust."
+      />
 
-      {/* Right Side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative z-10 bg-slate-950">
+      <div className="flex min-w-0 w-full max-w-full items-center justify-center px-6 py-10 lg:w-1/2 lg:p-10">
         <motion.div
-          initial={{ opacity: 0, x: 50 }}
+          initial={false}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="w-full max-w-md"
+          transition={{ duration: 0.55, ease: 'easeOut' }}
+          className="w-full max-w-md min-w-0"
         >
           <div className="mb-8">
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.1 }}
-              className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-indigo-500/20"
-            >
-              <Sparkles className="w-6 h-6 text-white" />
-            </motion.div>
-            <h1 className="text-4xl font-bold text-white mb-2">Create an account</h1>
-            <p className="text-slate-400">
-              Enter your email below to create your account
+            <div className="mb-8 flex items-center gap-3 lg:hidden">
+              <CloudGuardLogo size={42} />
+              <div>
+                <p className="font-semibold text-white">CloudGuard</p>
+                <p className="text-xs uppercase tracking-[0.22em] text-cyan-200/60">Sentry Suite</p>
+              </div>
+            </div>
+            <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg border border-cyan-300/16 bg-cyan-300/10 text-cyan-100 shadow-lg shadow-cyan-500/10">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <h1 className="text-4xl font-semibold tracking-tight text-white">Create an account</h1>
+            <p className="mt-3 max-w-full text-sm leading-6 text-slate-400">
+              Start monitoring AWS waste, security drift, and remediation opportunities.
             </p>
           </div>
 
@@ -84,89 +81,100 @@ export default function SignUp() {
                 initial={{ opacity: 0, height: 0, marginBottom: 0 }}
                 animate={{ opacity: 1, height: 'auto', marginBottom: 16 }}
                 exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-3 overflow-hidden text-red-200 text-sm mb-6"
+                className="mb-6 flex items-start gap-3 overflow-hidden rounded-lg border border-rose-300/20 bg-rose-300/10 p-3 text-sm text-rose-100"
               >
-                <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-400" />
+                <AlertCircle className="h-5 w-5 shrink-0 text-rose-200" />
                 <p>{error}</p>
               </motion.div>
             )}
           </AnimatePresence>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2 col-span-2">
-                <label className="text-sm font-medium text-slate-300">Full Name</label>
+            <div className="space-y-2">
+              <label className="ml-1 text-sm font-medium text-slate-300">Full Name</label>
+              <div className="group relative">
+                <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-cyan-200" />
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300 hover:bg-slate-900"
-                  placeholder="John Doe"
+                  className="premium-input w-full rounded-lg px-10 py-3 text-white placeholder:text-slate-600"
+                  placeholder="Jane Doe"
                   disabled={isLoading}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="flex h-10 w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300 hover:bg-slate-900"
-                placeholder="john@example.com"
-                disabled={isLoading}
-              />
+              <label className="ml-1 text-sm font-medium text-slate-300">Email</label>
+              <div className="group relative">
+                <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-cyan-200" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="premium-input w-full rounded-lg px-10 py-3 text-white placeholder:text-slate-600"
+                  placeholder="jane@example.com"
+                  disabled={isLoading}
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="flex h-10 w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300 hover:bg-slate-900"
-                placeholder="••••••••"
-                disabled={isLoading}
-                minLength={8}
-              />
+              <label className="ml-1 text-sm font-medium text-slate-300">Password</label>
+              <div className="group relative">
+                <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-cyan-200" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="premium-input w-full rounded-lg px-10 py-3 text-white placeholder:text-slate-600"
+                  placeholder="At least 8 characters"
+                  disabled={isLoading}
+                  minLength={8}
+                />
+              </div>
             </div>
+
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Confirm Password</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="flex h-10 w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300 hover:bg-slate-900"
-                placeholder="••••••••"
-                disabled={isLoading}
-                minLength={8}
-              />
+              <label className="ml-1 text-sm font-medium text-slate-300">Confirm Password</label>
+              <div className="group relative">
+                <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-cyan-200" />
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="premium-input w-full rounded-lg px-10 py-3 text-white placeholder:text-slate-600"
+                  placeholder="Repeat password"
+                  disabled={isLoading}
+                  minLength={8}
+                />
+              </div>
             </div>
 
             <motion.button
-              whileHover={{ scale: 1.02 }}
+              whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
               disabled={isLoading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-md transition-colors flex items-center justify-center gap-2 mt-6 shadow-lg shadow-indigo-500/25"
+              className="premium-button mt-2 flex w-full items-center justify-center gap-2 rounded-lg py-3.5 font-semibold"
             >
               {isLoading ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="h-5 w-5 rounded-full border-2 border-slate-950/30 border-t-slate-950 animate-spin" />
               ) : (
                 <>
                   Create Account
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="h-4 w-4" />
                 </>
               )}
             </motion.button>
           </form>
 
           <div className="mt-8 text-center text-sm text-slate-500">
-            Already have an account?{" "}
-            <Link to="/login" className="font-medium text-indigo-400 hover:text-indigo-300 underline underline-offset-4">
+            Already have an account?{' '}
+            <Link to="/login" className="font-semibold text-cyan-100 transition-colors hover:text-white">
               Sign in
             </Link>
           </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "../../lib/utils";
 
@@ -24,7 +24,7 @@ export const EncryptedText = ({
     const [displayText, setDisplayText] = useState<string[]>([]);
     const [revealedIndex, setRevealedIndex] = useState(0);
 
-    const targetChars = text.split("");
+    const targetChars = useMemo(() => text.split(""), [text]);
 
     useEffect(() => {
         let localRevealedIndex = 0;
@@ -61,7 +61,7 @@ export const EncryptedText = ({
             clearInterval(scrambleInterval);
             clearInterval(revealInterval);
         };
-    }, [text, charset, revealDelayMs, flipDelayMs]);
+    }, [targetChars, charset, revealDelayMs, flipDelayMs]);
 
     return (
         <span className={cn("inline-block whitespace-pre-wrap", className)}>

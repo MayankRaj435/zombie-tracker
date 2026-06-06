@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronUp, MoreVertical, Square, Trash2, Clock } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, MoreVertical, Power, Trash2, Unplug } from 'lucide-react';
 import { cn } from '../../lib/utils';
+
+type ResourceAction = 'terminate' | 'stop' | 'schedule' | 'delete' | 'release';
 
 interface ResourceCardProps {
     id: string;
@@ -10,8 +13,8 @@ interface ResourceCardProps {
     status: 'idle' | 'active' | 'warning' | 'critical';
     cost?: string;
     metadata?: { label: string; value: string }[];
-    details?: React.ReactNode;
-    onAction?: (action: 'terminate' | 'stop' | 'schedule', id: string) => void;
+    details?: ReactNode;
+    onAction?: (action: ResourceAction, id: string) => void;
     selected?: boolean;
     onSelect?: (id: string, selected: boolean) => void;
     className?: string;
@@ -19,28 +22,32 @@ interface ResourceCardProps {
 
 const statusConfig = {
     idle: {
-        bg: 'bg-yellow-500/10',
-        text: 'text-yellow-400',
-        border: 'border-yellow-500/20',
-        dot: 'bg-yellow-500'
+        bg: 'bg-amber-300/10',
+        text: 'text-amber-200',
+        border: 'border-amber-300/18',
+        dot: 'bg-amber-300',
+        stripe: 'from-amber-300/80 to-cyan-300/20'
     },
     active: {
-        bg: 'bg-green-500/10',
-        text: 'text-green-400',
-        border: 'border-green-500/20',
-        dot: 'bg-green-500'
+        bg: 'bg-emerald-300/10',
+        text: 'text-emerald-200',
+        border: 'border-emerald-300/18',
+        dot: 'bg-emerald-300',
+        stripe: 'from-emerald-300/80 to-cyan-300/20'
     },
     warning: {
-        bg: 'bg-orange-500/10',
-        text: 'text-orange-400',
-        border: 'border-orange-500/20',
-        dot: 'bg-orange-500'
+        bg: 'bg-orange-300/10',
+        text: 'text-orange-200',
+        border: 'border-orange-300/18',
+        dot: 'bg-orange-300',
+        stripe: 'from-orange-300/80 to-amber-300/20'
     },
     critical: {
-        bg: 'bg-red-500/10',
-        text: 'text-red-400',
-        border: 'border-red-500/20',
-        dot: 'bg-red-500'
+        bg: 'bg-rose-300/10',
+        text: 'text-rose-200',
+        border: 'border-rose-300/18',
+        dot: 'bg-rose-300',
+        stripe: 'from-rose-300/80 to-amber-300/20'
     }
 };
 
@@ -61,44 +68,70 @@ export const ResourceCard = ({
     const [showActions, setShowActions] = useState(false);
     const statusStyle = statusConfig[status];
 
-    const actions = [
-        { icon: Square, label: 'Stop', action: 'stop' as const, color: 'text-orange-400 hover:bg-orange-500/10' },
-        { icon: Trash2, label: 'Terminate', action: 'terminate' as const, color: 'text-red-400 hover:bg-red-500/10' },
-        { icon: Clock, label: 'Schedule', action: 'schedule' as const, color: 'text-blue-400 hover:bg-blue-500/10' },
-    ];
+    const resourceKind = useMemo(() => {
+        if (title.startsWith('vol-')) return 'volume';
+        if (title.startsWith('eipalloc-') || metadata.some(item => item.label.toLowerCase().includes('public ip'))) return 'eip';
+        return 'instance';
+    }, [metadata, title]);
+
+    const actions = useMemo(() => {
+        if (resourceKind === 'volume') {
+            return [
+                { icon: Trash2, label: 'Delete', action: 'delete' as const, color: 'text-rose-200 hover:bg-rose-300/10 hover:border-rose-300/20' },
+                { icon: Clock, label: 'Schedule', action: 'schedule' as const, color: 'text-cyan-200 hover:bg-cyan-300/10 hover:border-cyan-300/20' },
+            ];
+        }
+
+        if (resourceKind === 'eip') {
+            return [
+                { icon: Unplug, label: 'Release', action: 'release' as const, color: 'text-orange-200 hover:bg-orange-300/10 hover:border-orange-300/20' },
+                { icon: Clock, label: 'Schedule', action: 'schedule' as const, color: 'text-cyan-200 hover:bg-cyan-300/10 hover:border-cyan-300/20' },
+            ];
+        }
+
+        return [
+            { icon: Power, label: 'Stop', action: 'stop' as const, color: 'text-amber-200 hover:bg-amber-300/10 hover:border-amber-300/20' },
+            { icon: Trash2, label: 'Terminate', action: 'terminate' as const, color: 'text-rose-200 hover:bg-rose-300/10 hover:border-rose-300/20' },
+            { icon: Clock, label: 'Schedule', action: 'schedule' as const, color: 'text-cyan-200 hover:bg-cyan-300/10 hover:border-cyan-300/20' },
+        ];
+    }, [resourceKind]);
 
     return (
         <motion.div
             layout
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            whileHover={{ y: -2 }}
+            exit={{ opacity: 0, y: -18 }}
+            whileHover={{ y: -3 }}
+            onMouseEnter={() => setShowActions(true)}
+            onMouseLeave={() => setShowActions(false)}
             className={cn(
-                'glass-panel rounded-xl overflow-hidden transition-all',
-                selected && 'ring-2 ring-indigo-500 shadow-lg shadow-indigo-500/20',
+                'premium-card group rounded-lg transition-all',
+                selected && 'ring-2 ring-cyan-300/60 shadow-[0_22px_58px_rgba(34,211,238,0.16)]',
                 className
             )}
         >
+            <div className={cn('absolute inset-y-0 left-0 w-1 bg-gradient-to-b', statusStyle.stripe)} />
+
             <div className="p-4">
                 <div className="flex items-start gap-4">
-                    {/* Checkbox */}
                     {onSelect && (
                         <motion.button
                             whileTap={{ scale: 0.9 }}
                             onClick={() => onSelect(id, !selected)}
                             className={cn(
-                                'w-5 h-5 rounded border-2 flex items-center justify-center transition-all mt-1',
+                                'mt-1 flex h-5 w-5 items-center justify-center rounded-md border-2 transition-all',
                                 selected
-                                    ? 'bg-indigo-500 border-indigo-500'
-                                    : 'border-slate-600 hover:border-indigo-500'
+                                    ? 'border-cyan-300 bg-cyan-300 text-slate-950'
+                                    : 'border-slate-600 hover:border-cyan-300'
                             )}
+                            aria-label={selected ? 'Deselect resource' : 'Select resource'}
                         >
                             {selected && (
                                 <motion.svg
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
-                                    className="w-3 h-3 text-white"
+                                    className="h-3 w-3"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -110,66 +143,57 @@ export const ResourceCard = ({
                         </motion.button>
                     )}
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                        {/* Header */}
-                        <div className="flex items-start justify-between gap-3 mb-2">
-                            <div className="flex-1 min-w-0">
-                                <h3 className="text-white font-semibold truncate font-mono text-sm">{title}</h3>
-                                {subtitle && <p className="text-slate-400 text-xs mt-0.5">{subtitle}</p>}
+                    <div className="min-w-0 flex-1">
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                                <h3 className="truncate font-mono text-sm font-semibold text-white">{title}</h3>
+                                {subtitle && <p className="mt-1 text-xs text-slate-400">{subtitle}</p>}
                             </div>
 
-                            {/* Status badge */}
-                            <div className={cn('flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium border', statusStyle.bg, statusStyle.text, statusStyle.border)}>
-                                <span className={cn('w-1.5 h-1.5 rounded-full animate-pulse', statusStyle.dot)} />
+                            <div className={cn('flex shrink-0 items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold capitalize', statusStyle.bg, statusStyle.text, statusStyle.border)}>
+                                <span className={cn('h-1.5 w-1.5 rounded-full shadow-[0_0_12px_currentColor]', statusStyle.dot)} />
                                 {status}
                             </div>
                         </div>
 
-                        {/* Metadata */}
                         {metadata.length > 0 && (
-                            <div className="flex flex-wrap gap-3 mb-3">
-                                {metadata.map((item, idx) => (
-                                    <div key={idx} className="flex items-center gap-2">
-                                        <span className="text-slate-500 text-xs">{item.label}:</span>
-                                        <span className="text-slate-300 text-xs font-medium bg-slate-800/50 px-2 py-0.5 rounded border border-white/10">
-                                            {item.value}
-                                        </span>
+                            <div className="mb-3 flex flex-wrap gap-2">
+                                {metadata.map((item) => (
+                                    <div key={`${item.label}-${item.value}`} className="rounded-md border border-white/10 bg-white/[0.035] px-2.5 py-1">
+                                        <span className="text-[0.67rem] uppercase tracking-[0.14em] text-slate-500">{item.label}</span>
+                                        <span className="ml-2 text-xs font-medium text-slate-200">{item.value}</span>
                                     </div>
                                 ))}
                             </div>
                         )}
 
-                        {/* Cost */}
-                        {cost && (
-                            <div className="flex items-center gap-2 mb-3">
-                                <span className="text-slate-500 text-xs">Est. Monthly Cost:</span>
-                                <span className="text-green-400 font-bold text-sm">{cost}</span>
-                            </div>
-                        )}
+                        <div className="flex flex-wrap items-center gap-2">
+                            {cost && (
+                                <div className="mr-auto rounded-md border border-emerald-300/14 bg-emerald-300/8 px-2.5 py-1 text-sm font-semibold text-emerald-200">
+                                    {cost} <span className="text-xs font-medium text-emerald-200/60">monthly</span>
+                                </div>
+                            )}
 
-                        {/* Action buttons - show on hover */}
-                        <div className="flex items-center gap-2">
                             <AnimatePresence>
                                 {showActions && (
                                     <motion.div
-                                        initial={{ opacity: 0, x: -10 }}
+                                        initial={{ opacity: 0, x: -8 }}
                                         animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: -10 }}
-                                        className="flex gap-2"
+                                        exit={{ opacity: 0, x: -8 }}
+                                        className="flex flex-wrap gap-2"
                                     >
                                         {actions.map((action) => (
                                             <motion.button
                                                 key={action.action}
-                                                whileHover={{ scale: 1.05 }}
+                                                whileHover={{ scale: 1.03 }}
                                                 whileTap={{ scale: 0.95 }}
                                                 onClick={() => onAction?.(action.action, id)}
                                                 className={cn(
-                                                    'px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 border border-white/10',
+                                                    'flex items-center gap-1.5 rounded-md border border-white/10 px-3 py-1.5 text-xs font-semibold transition-all',
                                                     action.color
                                                 )}
                                             >
-                                                <action.icon className="w-3.5 h-3.5" />
+                                                <action.icon className="h-3.5 w-3.5" />
                                                 {action.label}
                                             </motion.button>
                                         ))}
@@ -179,25 +203,25 @@ export const ResourceCard = ({
 
                             <button
                                 onClick={() => setShowActions(!showActions)}
-                                className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors ml-auto"
+                                className="btn-ghost rounded-md p-2 text-slate-400 hover:text-white"
+                                aria-label="Show resource actions"
                             >
-                                <MoreVertical className="w-4 h-4" />
+                                <MoreVertical className="h-4 w-4" />
                             </button>
 
-                            {/* Expand button */}
                             {details && (
                                 <button
                                     onClick={() => setIsExpanded(!isExpanded)}
-                                    className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
+                                    className="btn-ghost rounded-md p-2 text-slate-400 hover:text-white"
+                                    aria-label={isExpanded ? 'Collapse details' : 'Expand details'}
                                 >
-                                    {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                    {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                 </button>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Expandable details */}
                 <AnimatePresence>
                     {isExpanded && details && (
                         <motion.div
@@ -207,20 +231,13 @@ export const ResourceCard = ({
                             transition={{ duration: 0.2 }}
                             className="overflow-hidden"
                         >
-                            <div className="mt-4 pt-4 border-t border-white/10">
+                            <div className="mt-4 border-t border-white/10 pt-4 text-slate-300">
                                 {details}
                             </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
             </div>
-
-            {/* Hover effect */}
-            <div
-                onMouseEnter={() => setShowActions(true)}
-                onMouseLeave={() => setShowActions(false)}
-                className="absolute inset-0 pointer-events-none"
-            />
         </motion.div>
     );
 };

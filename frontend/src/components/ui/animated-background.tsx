@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 
 interface Particle {
@@ -13,7 +14,7 @@ interface Particle {
 }
 
 interface AnimatedBackgroundProps {
-    children?: React.ReactNode;
+    children?: ReactNode;
     className?: string;
     particleCount?: number;
     colors?: string[];
@@ -22,8 +23,8 @@ interface AnimatedBackgroundProps {
 export const AnimatedBackground = ({
     children,
     className,
-    particleCount = 50,
-    colors = ['#6366f1', '#8b5cf6', '#a855f7', '#06b6d4', '#3b82f6']
+    particleCount = 34,
+    colors = ['#22d3ee', '#34d399', '#f59e0b', '#60a5fa']
 }: AnimatedBackgroundProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const particlesRef = useRef<Particle[]>([]);
@@ -37,67 +38,65 @@ export const AnimatedBackground = ({
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Set canvas size
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
         const resizeCanvas = () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            const scale = window.devicePixelRatio || 1;
+            canvas.width = window.innerWidth * scale;
+            canvas.height = window.innerHeight * scale;
+            canvas.style.width = `${window.innerWidth}px`;
+            canvas.style.height = `${window.innerHeight}px`;
+            ctx.setTransform(scale, 0, 0, scale, 0, 0);
         };
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
-        // Initialize particles
         const initParticles = () => {
             particlesRef.current = [];
             for (let i = 0; i < particleCount; i++) {
                 particlesRef.current.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    vx: (Math.random() - 0.5) * 0.5,
-                    vy: (Math.random() - 0.5) * 0.5,
-                    size: Math.random() * 3 + 1,
+                    x: Math.random() * window.innerWidth,
+                    y: Math.random() * window.innerHeight,
+                    vx: (Math.random() - 0.5) * 0.28,
+                    vy: (Math.random() - 0.5) * 0.28,
+                    size: Math.random() * 1.9 + 0.8,
                     color: colors[Math.floor(Math.random() * colors.length)],
-                    opacity: Math.random() * 0.5 + 0.2
+                    opacity: Math.random() * 0.32 + 0.12
                 });
             }
         };
         initParticles();
 
-        // Mouse move handler
         const handleMouseMove = (e: MouseEvent) => {
             mouseRef.current = { x: e.clientX, y: e.clientY };
         };
         window.addEventListener('mousemove', handleMouseMove);
 
-        // Animation loop
         const animate = () => {
-            ctx.fillStyle = 'rgba(2, 6, 23, 0.05)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
 
             particlesRef.current.forEach((particle, i) => {
-                // Update position
-                particle.x += particle.vx;
-                particle.y += particle.vy;
+                if (!reduceMotion) {
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                }
 
-                // Mouse interaction
                 const dx = mouseRef.current.x - particle.x;
                 const dy = mouseRef.current.y - particle.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
 
-                if (distance < 150) {
-                    const force = (150 - distance) / 150;
+                if (!reduceMotion && distance > 0 && distance < 130) {
+                    const force = (130 - distance) / 130;
                     particle.vx -= (dx / distance) * force * 0.1;
                     particle.vy -= (dy / distance) * force * 0.1;
                 }
 
-                // Boundary check
-                if (particle.x < 0 || particle.x > canvas.width) particle.vx *= -1;
-                if (particle.y < 0 || particle.y > canvas.height) particle.vy *= -1;
+                if (particle.x < 0 || particle.x > window.innerWidth) particle.vx *= -1;
+                if (particle.y < 0 || particle.y > window.innerHeight) particle.vy *= -1;
 
-                // Damping
                 particle.vx *= 0.99;
                 particle.vy *= 0.99;
 
-                // Draw particle
                 ctx.beginPath();
                 ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
                 ctx.fillStyle = particle.color;
@@ -110,12 +109,12 @@ export const AnimatedBackground = ({
                     const dy = particle.y - otherParticle.y;
                     const distance = Math.sqrt(dx * dx + dy * dy);
 
-                    if (distance < 120) {
+                    if (distance < 150) {
                         ctx.beginPath();
                         ctx.moveTo(particle.x, particle.y);
                         ctx.lineTo(otherParticle.x, otherParticle.y);
                         ctx.strokeStyle = particle.color;
-                        ctx.globalAlpha = (1 - distance / 120) * 0.2;
+                        ctx.globalAlpha = (1 - distance / 150) * 0.13;
                         ctx.lineWidth = 0.5;
                         ctx.stroke();
                     }
@@ -123,7 +122,9 @@ export const AnimatedBackground = ({
             });
 
             ctx.globalAlpha = 1;
-            animationFrameRef.current = requestAnimationFrame(animate);
+            if (!reduceMotion) {
+                animationFrameRef.current = requestAnimationFrame(animate);
+            }
         };
 
         animate();
@@ -138,13 +139,12 @@ export const AnimatedBackground = ({
     }, [particleCount, colors]);
 
     return (
-        <div className={cn('relative w-full h-full', className)}>
+        <div className={cn('premium-shell relative w-full min-h-screen', className)}>
             <canvas
                 ref={canvasRef}
-                className="absolute inset-0 z-0"
-                style={{ background: 'linear-gradient(to bottom, #020617, #0f172a)' }}
+                className="fixed inset-0 z-0 pointer-events-none opacity-70"
             />
-            <div className="relative z-10 w-full h-full">
+            <div className="relative z-10 w-full min-h-screen">
                 {children}
             </div>
         </div>
