@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 // Get all alerts
 router.get('/', async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user.userId;
+        const userId = (req as any).userId;
         const alerts = await prisma.alert.findMany({
             where: { userId },
             orderBy: { createdAt: 'desc' },
@@ -24,7 +24,7 @@ router.get('/', async (req: Request, res: Response) => {
 router.post('/:id/read', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const userId = (req as any).user.userId;
+        const userId = (req as any).userId;
 
         await prisma.alert.updateMany({
             where: { id, userId },
@@ -40,7 +40,7 @@ router.post('/:id/read', async (req: Request, res: Response) => {
 // Mark all as read
 router.post('/read-all', async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user.userId;
+        const userId = (req as any).userId;
 
         await prisma.alert.updateMany({
             where: { userId, isRead: false },
@@ -56,7 +56,7 @@ router.post('/read-all', async (req: Request, res: Response) => {
 // Get alert configurations
 router.get('/config', async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user.userId;
+        const userId = (req as any).userId;
         const configs = await prisma.alertConfiguration.findMany({
             where: { userId },
         });
@@ -70,7 +70,7 @@ router.get('/config', async (req: Request, res: Response) => {
 router.post('/config', async (req: Request, res: Response) => {
     try {
         const { type, threshold, enabled, channels } = req.body;
-        const userId = (req as any).user.userId;
+        const userId = (req as any).userId;
 
         const config = await prisma.alertConfiguration.upsert({
             where: {
@@ -89,7 +89,7 @@ router.post('/config', async (req: Request, res: Response) => {
 // Trigger manual check
 router.post('/check', async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user.userId;
+        const userId = (req as any).userId;
         await checkAlerts(userId);
         res.json({ message: 'Alert check triggered' });
     } catch (error: any) {

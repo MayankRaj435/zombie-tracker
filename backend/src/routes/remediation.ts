@@ -34,7 +34,7 @@ const getCredentials = async (userId: string) => {
 router.post('/instance', async (req: Request, res: Response): Promise<void> => {
     try {
         const { instanceId, action } = req.body;
-        const userId = (req as any).user.userId;
+        const userId = (req as any).userId;
 
         if (!['stop', 'terminate'].includes(action)) {
             res.status(400).json({ error: 'Invalid action' });
@@ -81,7 +81,7 @@ router.post('/instance', async (req: Request, res: Response): Promise<void> => {
 router.post('/volume', async (req: Request, res: Response): Promise<void> => {
     try {
         const { volumeId, createSnapshot = true } = req.body;
-        const userId = (req as any).user.userId;
+        const userId = (req as any).userId;
 
         const credentials = await getCredentials(userId);
         const result = await deleteVolume(credentials, volumeId, createSnapshot);
@@ -117,7 +117,7 @@ router.post('/volume', async (req: Request, res: Response): Promise<void> => {
 router.post('/eip', async (req: Request, res: Response): Promise<void> => {
     try {
         const { allocationId } = req.body;
-        const userId = (req as any).user.userId;
+        const userId = (req as any).userId;
 
         const credentials = await getCredentials(userId);
         const result = await releaseElasticIP(credentials, allocationId);
@@ -153,7 +153,7 @@ router.post('/eip', async (req: Request, res: Response): Promise<void> => {
 router.post('/bulk', async (req: Request, res: Response): Promise<void> => {
     try {
         const { items } = req.body; // Array of { id, type, action }
-        const userId = (req as any).user.userId;
+        const userId = (req as any).userId;
 
         if (!Array.isArray(items)) {
             res.status(400).json({ error: 'Items must be an array' });
@@ -228,7 +228,7 @@ router.post('/bulk', async (req: Request, res: Response): Promise<void> => {
 // Get remediation history
 router.get('/history', async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user.userId;
+        const userId = (req as any).userId;
         const history = await prisma.remediationAction.findMany({
             where: { userId },
             orderBy: { executedAt: 'desc' },

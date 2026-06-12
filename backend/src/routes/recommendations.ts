@@ -26,7 +26,7 @@ const getCredentials = async (userId: string) => {
 // Get right-sizing recommendations
 router.get('/', async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user.userId;
+        const userId = (req as any).userId;
         const refresh = req.query.refresh === 'true';
 
         // If not refresh, try to get from DB first
@@ -95,7 +95,7 @@ router.get('/', async (req: Request, res: Response) => {
 router.post('/apply/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const userId = (req as any).user.userId;
+        const userId = (req as any).userId;
 
         const updated = await prisma.rightSizingRecommendation.update({
             where: { id },

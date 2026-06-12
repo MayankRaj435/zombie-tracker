@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -24,6 +25,7 @@ model User {
   orphanedVolumes     OrphanedVolume[]
   unattachedEips      UnattachedEIP[]
   securityGroupIssues SecurityGroupIssue[]
+  dailyCosts          DailyCost[]
   
   remediationActions        RemediationAction[]
   scheduledActions          ScheduledAction[]
@@ -159,4 +161,21 @@ model SecurityGroupIssue {
 
   @@unique([groupId, userId, description]) // Prevent duplicate alerts for the same issue
   @@index([userId])
+}
+
+/// Caches daily spend data fetched from AWS Cost Explorer.
+/// Avoids repeated API calls (each call costs $0.01).
+/// `service` is optional — null means the total across all services.
+model DailyCost {
+  id        String   @id @default(cuid())
+  date      String   // YYYY-MM-DD
+  amount    Float
+  service   String?  // e.g. "AmazonEC2", null = account total
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date, service])
+  @@index([userId])
+  @@index([userId, date])
 }
