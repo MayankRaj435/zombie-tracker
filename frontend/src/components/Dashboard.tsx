@@ -725,7 +725,13 @@ export default function Dashboard() {
                 )}
 
                 {activeSection === 'remediation' && (
-                  <RemediationPanel onAction={handleResourceAction} isProcessing={isDeleting} />
+                  <RemediationPanel
+                    onAction={handleResourceAction}
+                    isProcessing={isDeleting}
+                    idleInstances={instances}
+                    orphanedVolumes={volumes}
+                    unattachedEips={eips}
+                  />
                 )}
 
                 {activeSection === 'rightsizing' && (
